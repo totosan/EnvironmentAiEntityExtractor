@@ -13,6 +13,10 @@ namespace Temp
 {
     class Program
     {
+        /*
+            EntityExtractor.exe <input folder> <output folder>
+        
+        */
         private const string Url = "http://localhost:8080/detect";
         private static ServiceProvider _svcProv;
         static async Task Main(string[] args)
@@ -31,7 +35,7 @@ namespace Temp
             }
             else
             {
-                Console.WriteLine("Usage: EintityExtractor.exe <folder with pics>");
+                Console.WriteLine("Usage: EntityExtractor.exe <folder with pics> <folder for output>");
             }
         }
 
@@ -39,7 +43,7 @@ namespace Temp
         {
             await Task.Run(() =>
             {
-                FilePutter fp = new FilePutter(output, logger);
+                FilePutter filePutter = new FilePutter(output, logger);
 
                 NameValueCollection nvc = new NameValueCollection();
                 nvc.Add("threshold", "0.4");
@@ -50,9 +54,9 @@ namespace Temp
                     Console.WriteLine($"'{path}' is no folder or does not exists!");
                 }
 
-                var files = grabber.GetFiles();
+                var grabbedFiles = grabber.GetFiles();
                 var library = new Dictionary<string, (int[], string)>();
-                foreach (var file in files)
+                foreach (var file in grabbedFiles)
                 {
                     var resultString = ImageUpload.ImageUploader.UploadFilesToRemoteUrl(Url, new string[] { file }, nvc);
                     resultString = resultString.Replace("\r", "").Replace("\n", "");
@@ -67,7 +71,7 @@ namespace Temp
                                 library[yoloResult[i][0].ToString()] = (yoloResult[i][2].ToObject<int[]>(), file);
                                 Console.Write($" {yoloResult[i][0]} ({yoloResult[i][1]})");
 
-                                fp.Put(file,i, yoloResult[i][0].ToString(), Convert.ToSingle(yoloResult[i][1]), yoloResult[i][2].ToObject<int[]>());
+                                filePutter.Put(file,i, yoloResult[i][0].ToString(), Convert.ToSingle(yoloResult[i][1]), yoloResult[i][2].ToObject<int[]>());
                             }
                             Console.WriteLine();
                         }
