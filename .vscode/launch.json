@@ -10,7 +10,8 @@
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/bin/Debug/netcoreapp3.0/EntityExtractor.dll",
-            "args": ["C:\\Users\\toto_\\OneDrive\\Bilder\\alerts2\\video\\RQGBG\\grabs","C:\\temp\\outs"],
+            "args": ["C:\\Temp\\ImageProcessing_tomowArea","C:\\Temp\\ImageProcessing_tomowArea_out"],
+            //"args": ["C:\\Users\\toto_\\OneDrive\\Bilder\\alerts2\\video\\RQGBG\\grabs","C:\\temp\\outs"],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",
             "stopAtEntry": false

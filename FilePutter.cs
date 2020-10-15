@@ -1,6 +1,9 @@
 using System.IO;
 using Microsoft.Extensions.Logging;
 using Images;
+using System.Drawing;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Files
 {
@@ -36,7 +39,7 @@ namespace Files
             _log = log;
         }
 
-        public void Put(string filename, int counter, string className, float confidence, int[] rect)
+        public void SaveCroppedImage(string filename, int counter, string className, float confidence, int[] rect)
         {
             var imgr = new Images.Imager(filename);
             imgr.Rect = rect.ConvertToRect();
@@ -50,6 +53,19 @@ namespace Files
             var filepath = System.IO.Path.Combine(newPath, $"{System.IO.Path.GetFileNameWithoutExtension(filename)}_{counter.ToString()}({confidence.ToString("P0")}){System.IO.Path.GetExtension(filename)}");
             File.WriteAllBytes(filepath, croppedImgAsBytes);
             _log.LogInformation($", {filename}, {className}, {confidence}");
+        }
+
+        public void WriteMetaData(string filename, Dictionary<string, List<(int[], string)>> value)
+        {
+            var imgr = new Images.Imager(filename);
+            var commentField = MetaProperty.ImageDescription;
+
+            var lables = string.Join(',',value.Select(x=>x.Key)); 
+            imgr.Image.SetMetaValue(commentField, lables);
+
+            var filepath = System.IO.Path.Combine(Path, System.IO.Path.GetFileName(filename));
+            imgr.Image.Save(filepath);
+            //File.WriteAllBytes(filepath, imgr.Image.Crop(imgr.Image.Size.Width, imgr.Image.Size.Height,0,0));             
         }
     }
 }
