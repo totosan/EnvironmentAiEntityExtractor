@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Serilog;
 using Files;
 using PipelineImplementations.BlockingCollection;
+using System.IO;
 
 namespace Temp
 {
@@ -27,17 +28,33 @@ namespace Temp
 
             if (args.Length == 2)
             {
-                await RunAsync(args[0], args[1], logger);
-
-/*                while (Console.ReadKey(true).Key != ConsoleKey.Escape)
+                await Task.Run(() =>
                 {
-                    await Task.Delay(100);
-                }*/
+                    var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"), args[0]);
+                    var result = detector.RunDetection();
+                });
+                //await RunAsync(args[0], args[1], logger);
+
+                                while (Console.ReadKey(true).Key != ConsoleKey.Escape)
+                                {
+                                    await Task.Delay(100);
+                                }
             }
             else
             {
                 Console.WriteLine("Usage: EntityExtractor.exe <folder with pics> <folder for output>");
             }
+        }
+
+
+        public static string GetAbsolutePath(string relativePath)
+        {
+            FileInfo _dataRoot = new FileInfo(typeof(Program).Assembly.Location);
+            string assemblyFolderPath = _dataRoot.Directory.FullName;
+
+            string fullPath = Path.Combine(assemblyFolderPath, relativePath);
+
+            return fullPath;
         }
 
         static async Task RunAsync(string path, string output, Microsoft.Extensions.Logging.ILogger logger)
@@ -55,28 +72,35 @@ namespace Temp
                 var grabbedFiles = grabber.GetFiles();
 
                 var library = new Dictionary<string, List<(int[], string)>>();
-                var pipeline = CreatePipelineAwait(filePutter, library);
+                var pipeline = GetCastingPipeline(filePutter);
 
                 int cnt = 0;
                 var tsk = System.Threading.Tasks.Task.Run(async () =>
-                {
-                    foreach (var file in grabbedFiles)
-                    {
-                        await pipeline.Execute(file);
-                        cnt++;
-                        if (cnt == 1000)
-                            break;
-                    }
-                });
+               {
+
+                   foreach (var file in grabbedFiles)
+                   {
+                       var lib = await pipeline.Execute(file);
+                       //Console.WriteLine(lib?.Count);
+                   }
+               });
                 tsk.Wait();
 
                 Console.WriteLine("Finished Pipeline");
             });
         }
 
-
-        private static (JArray,string) GetDetections(string file)
+        class DetectionOutputPoco
         {
+            public JArray Detections { get; set; }
+            public string File { get; set; }
+        }
+        private static DetectionOutputPoco GetDetections(string file)
+        {
+            if (string.IsNullOrWhiteSpace(file))
+            {
+                throw new ArgumentException("Filename not given!");
+            }
             NameValueCollection nvc = new NameValueCollection();
             nvc.Add("threshold", "0.4");
             var resultString = ImageUpload.ImageUploader.UploadFilesToRemoteUrl(Url, new string[] { file }, nvc);
@@ -84,13 +108,28 @@ namespace Temp
             if (resultString != "[]")
             {
                 Console.Write($"{file} :");
-                return (Newtonsoft.Json.JsonConvert.DeserializeObject<JArray>(resultString),file);
+                return new DetectionOutputPoco() { Detections = Newtonsoft.Json.JsonConvert.DeserializeObject<JArray>(resultString), File = file };
             }
-            return (null,file);
+            return null;
         }
 
-        private static (Dictionary<string, List<(int[], string)>>,string) GetLabels(JArray yoloResult, string file)
+
+        class WriteFileOutputPoco
         {
+            public string File { get; set; }
+            public Dictionary<string, List<(int[], string)>> Library { get; set; }
+        }
+
+        private static WriteFileOutputPoco GetLabels(DetectionOutputPoco detectionResult)
+        {
+            JArray yoloResult;
+            string file;
+            if (detectionResult == null)
+                return null;
+
+            yoloResult = detectionResult.Detections;
+            file = detectionResult.File;
+
             if (yoloResult != null && yoloResult.Count > 0)
             {
                 var libraryLocal = new Dictionary<string, List<(int[], string)>>();
@@ -101,65 +140,32 @@ namespace Temp
                     libraryLocal[yoloResult[i][0].ToString()].Add((yoloResult[i][2].ToObject<int[]>(), file));
                     Console.Write($" {yoloResult[i][0]} ({yoloResult[i][1]})");
                 }
-                return (libraryLocal,file);
+                return new WriteFileOutputPoco() { Library = libraryLocal, File = file };
             }
-            return (null,file);
+            return null;
         }
 
-        private static Dictionary<string, List<(int[], string)>> WriteFileOutput(FilePutter filePutter, string file, Dictionary<string, List<(int[], string)>> libraryLocal)
+        private static Dictionary<string, List<(int[], string)>> WriteFileOutput(FilePutter filePutter, WriteFileOutputPoco outputPoco)
         {
-            if (libraryLocal != null)
+            if (outputPoco == null)
             {
-                filePutter.WriteMetaData(file, libraryLocal);
+                return null;
             }
-            return libraryLocal;
-        }
-        private static void DoWork(FilePutter filePutter, Dictionary<string, List<(int[], string)>> library, string file)
-        {
-            NameValueCollection nvc = new NameValueCollection();
-            nvc.Add("threshold", "0.4");
-            var resultString = ImageUpload.ImageUploader.UploadFilesToRemoteUrl(Url, new string[] { file }, nvc);
-            resultString = resultString.Replace("\r", "").Replace("\n", "");
-            if (resultString != "[]")
-            {
-                Console.Write($"{file} :");
-                JArray yoloResult = Newtonsoft.Json.JsonConvert.DeserializeObject<JArray>(resultString);
-                if (yoloResult.Count > 0)
-                {
-                    var libraryLocal = new Dictionary<string, List<(int[], string)>>();
-                    for (var i = 0; i < yoloResult.Count; i++)
-                    {
-                        if (!libraryLocal.ContainsKey(yoloResult[i][0].ToString()))
-                            libraryLocal[yoloResult[i][0].ToString()] = new List<(int[], string)>();
-                        libraryLocal[yoloResult[i][0].ToString()].Add((yoloResult[i][2].ToObject<int[]>(), file));
-                        Console.Write($" {yoloResult[i][0]} ({yoloResult[i][1]})");
-                        //filePutter.Put(file,i, yoloResult[i][0].ToString(), Convert.ToSingle(yoloResult[i][1]), yoloResult[i][2].ToObject<int[]>());
-                    }
-                    filePutter.WriteMetaData(file, libraryLocal);
-
-                    foreach (var d in libraryLocal)
-                    {
-                        if (library.ContainsKey(d.Key))
-                        {
-                            library[d.Key].AddRange(d.Value);
-                        }
-                        else
-                            library.Add(d.Key, d.Value);
-                    }
-                    Console.WriteLine();
-                }
-            }
+            filePutter.WriteMetaData(outputPoco.File, outputPoco.Library);
+            return outputPoco.Library;
         }
 
-        private static GenericBCPipelineAwait<string, Dictionary<string, List<(int[], string)>>> CreatePipelineAwait(FilePutter filePutter, Dictionary<string, List<(int[], string)>> library)
+        private static IAwaitablePipeline<Dictionary<string, List<(int[], string)>>> GetCastingPipeline(FilePutter filePutter)
         {
-            var pipeline = new GenericBCPipelineAwait<string, Dictionary<string, List<(int[], string)>>>((inputFirst, builder) =>
-                 inputFirst
-                        .Step2(builder, input => GetDetections(input))
-                        .Step2(builder, input => GetLabels(input.Item1, input.Item2))
-                        .Step2(builder, input => WriteFileOutput(filePutter, input.Item2, input.Item1)));
+            var builder = new CastingPipelineWithAwait<Dictionary<string, List<(int[], string)>>>();
+            builder.AddStep(input => input as string, 2, 10);
+            builder.AddStep(input => GetDetections(input as string), 3, 10);
+            builder.AddStep(input => GetLabels((input as DetectionOutputPoco)), 1, 10);
+            builder.AddStep(input => WriteFileOutput(filePutter, input as WriteFileOutputPoco), 1, 10);
+            var pipeline = builder.GetPipeline();
             return pipeline;
         }
+
         private static ServiceProvider Configure()
         {
             IConfiguration configuration = new ConfigurationBuilder()

@@ -1,3 +1,4 @@
+// https://michaelscodingspot.com/pipeline-pattern-implementations-csharp/
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,34 +10,51 @@ using System.Threading.Tasks;
 namespace PipelineImplementations.BlockingCollection
 {
 
-    public class CastingPipelineWithMaxCapacity : IPipeline
+    public class CastingPipelineWithAwait<TOutput> : IAwaitablePipeline<TOutput>
     {
-        class StepInfo
+        class Step
         {
             public Func<object, object> Func { get; set; }
             public int DegreeOfParallelism { get; set; }
             public int MaxCapacity { get; set; }
         }
 
-        List<StepInfo> _pipelineSteps = new List<StepInfo>();
-        BlockingCollection<object>[] _buffers;
+        class Item
+        {
+            public object Input { get; set; }
+            public TaskCompletionSource<TOutput> TaskCompletionSource { get; set; }
+        }
 
-        public event Action<object> Finished;
+        List<Step> _pipelineSteps = new List<Step>();
+        BlockingCollection<Item>[] _buffers;
+
+        public event Action<TOutput> Finished;
 
         public void AddStep(Func<object, object> stepFunc, int degreeOfParallelism, int maxCapacity)
         {
-            _pipelineSteps.Add(new StepInfo() { Func = stepFunc, DegreeOfParallelism = degreeOfParallelism, MaxCapacity = maxCapacity });
+            _pipelineSteps.Add(new Step()
+            {
+                Func = stepFunc,
+                DegreeOfParallelism = degreeOfParallelism,
+                MaxCapacity = maxCapacity,
+            });
         }
 
-        public void Execute(object input)
+        public Task<TOutput> Execute(object input)
         {
             var first = _buffers[0];
-            first.Add(input);
+            var item = new Item()
+            {
+                Input = input,
+                TaskCompletionSource = new TaskCompletionSource<TOutput>()
+            };
+            first.Add(item);
+            return item.TaskCompletionSource.Task;
         }
 
-        public IPipeline GetPipeline()
+        public IAwaitablePipeline<TOutput> GetPipeline()
         {
-            _buffers = _pipelineSteps.Select(step => new BlockingCollection<object>(step.MaxCapacity)).ToArray();
+            _buffers = _pipelineSteps.Select(step => new BlockingCollection<Item>()).ToArray();
 
             int bufferIndex = 0;
             foreach (var pipelineStep in _pipelineSteps)
@@ -53,22 +71,30 @@ namespace PipelineImplementations.BlockingCollection
             return this;
         }
 
-        private void StartStep(int bufferIndexLocal, StepInfo pipelineStep)
+        private void StartStep(int bufferIndexLocal, Step pipelineStep)
         {
             foreach (var input in _buffers[bufferIndexLocal].GetConsumingEnumerable())
             {
-                var output = pipelineStep.Func.Invoke(input);
+                object output;
+                try
+                {
+                    output = pipelineStep.Func.Invoke(input.Input);
+                }
+                catch (Exception e)
+                {
+                    input.TaskCompletionSource.SetException(e);
+                    continue;
+                }
+
                 bool isLastStep = bufferIndexLocal == _pipelineSteps.Count - 1;
                 if (isLastStep)
                 {
-                    // This is dangerous as the invocation is added to the last step
-                    // Alternatively, you can utilize 'BeginInvoke' like here: https://stackoverflow.com/a/16336361/1229063
-                    Finished?.Invoke(output);
+                    input.TaskCompletionSource.SetResult((TOutput)(object)output);
                 }
                 else
                 {
                     var next = _buffers[bufferIndexLocal + 1];
-                    next.Add(output);
+                    next.Add(new Item() { Input = output, TaskCompletionSource = input.TaskCompletionSource });
                 }
             }
         }
