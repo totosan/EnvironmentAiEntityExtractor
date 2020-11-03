@@ -1,81 +1,76 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using General;
+using Images;
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime.Tensors;
 using ML.Data;
 using ML.Helper;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace ML
 {
 
     public class OnnxModelScorer
     {
-        public string Path { get; }
-        private readonly MLContext mlContext;
         private string imagesFolder;
+        private InferenceSession session;
 
-        public OnnxModelScorer(string modelPath, string imagesFolder)
+        public OnnxModelScorer(string modelPath)
         {
-            this.Path = modelPath;
-            this.mlContext = new MLContext();
-            this.imagesFolder = imagesFolder;
+            this.session = new InferenceSession(modelPath);
         }
 
-        private ITransformer LoadModel(string modelLocation)
-        {
-            Console.WriteLine("Read model");
-            Console.WriteLine($"Model location: {modelLocation}");
-            Console.WriteLine($"Default parameters: image size=({ImageNetSettings.imageWidth},{ImageNetSettings.imageHeight})");
-            var data = mlContext.Data.LoadFromEnumerable(new List<ImageNetData>());
-
-            var pipeline = mlContext.Transforms.LoadImages(outputColumnName: "image", imageFolder: "", inputColumnName: nameof(ImageNetData.ImagePath))
-                            .Append(mlContext.Transforms.ResizeImages(outputColumnName: "image", imageWidth: ImageNetSettings.imageWidth, imageHeight: ImageNetSettings.imageHeight, inputColumnName: "image"))
-                            .Append(mlContext.Transforms.ExtractPixels(outputColumnName: "data", inputColumnName: "image"))
-                            .Append(mlContext.Transforms.ApplyOnnxModel(modelFile: modelLocation//,
-                                    //outputColumnNames: ModelSettings.ModelOutputs.Split(','),
-                                    //inputColumnNames: new[] { ModelSettings.ModelInput }
-                                    ));
-
-            var model = pipeline.Fit(data);
-            return model;
-        }
-
-        private IEnumerable<float[]> PredictDataUsingModel(IDataView testData, ITransformer model)
+        private ImageNetPrediction PredictDataUsingModel(Imager imgr)
         {
             Console.WriteLine($"Images location: {imagesFolder}");
             Console.WriteLine("");
             Console.WriteLine("=====Identify the objects in the images=====");
             Console.WriteLine("");
-            IDataView scoredData = model.Transform(testData);
-            IEnumerable<float[]> probabilities = scoredData.GetColumn<float[]>(ModelSettings.ModelOutputs.Split(',')[1]);
-            IEnumerable<Int64[]> classes = scoredData.GetColumn<Int64[]>(ModelSettings.ModelOutputs.Split(',')[2]);
-            IEnumerable<float[]> boxes = scoredData.GetColumn<float[]>(ModelSettings.ModelOutputs.Split(',')[0]);
-            var classList = classes.ToList();
-            var probsList = probabilities.ToList();
-            var b = boxes.ToList();
 
-            //var arranged= probsList.ToDictionary()
-            return probabilities;
+            imgr.Resize(SixLabors.ImageSharp.Processing.ResizeMode.Stretch);
+            Tensor<float> input = new DenseTensor<float>(new[] { 1, 3, ImageNetSettings.imageHeight, ImageNetSettings.imageWidth });
+            var mean = new[] { 0.485f, 0.456f, 0.406f };
+            var stddev = new[] { 0.229f, 0.224f, 0.225f };
+            for (int y = 0; y < imgr.AsImage.Height; y++)
+            {
+                Span<Rgb24> pixelSpan = imgr.AsImage.GetPixelRowSpan(y);
+                for (int x = 0; x < imgr.AsImage.Width; x++)
+                {
+                    input[0, 0, y, x] = (pixelSpan[x].R);
+                    input[0, 1, y, x] = (pixelSpan[x].G);
+                    input[0, 2, y, x] = (pixelSpan[x].B);
+                }
+            }
+
+            var inputs = new List<NamedOnnxValue>
+                            {
+                                NamedOnnxValue.CreateFromTensor("data", input)
+                            };
+            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
+
+            ImageNetPrediction resultDict = new ImageNetPrediction();
+            resultDict.PredictedLabels = results.First(x => x.Name == "detected_classes").AsTensor<Int64>().ToArray();
+            var boxes = results.First(x => x.Name == "detected_boxes").AsTensor<Single>().ToArray();
+            var convertedBoxes = boxes.Split(4).Select(x => x.ToArray()).ToArray();
+            resultDict.PredictedBoxes = convertedBoxes;
+            resultDict.PredictedScores = results.First(x => x.Name == "detected_scores").AsTensor<float>().ToArray();
+            return resultDict;
         }
 
-        public IEnumerable<float[]> RunDetection()
+        public Imager RunDetection(string imagePath)
         {
-            IList<YoloBoundingBox> _boundingBoxes = new List<YoloBoundingBox>();
-            IEnumerable<ImageNetData> images = ImageNetData.ReadFromFile(imagesFolder);
-            IDataView imageDataView = mlContext.Data.LoadFromEnumerable(images);
+            var imager = new Imager(imagePath);
+            var prediction = PredictDataUsingModel(imager);
+            var i = 0;
+            var best = (from p in prediction.PredictedScores
+                        select new { Index = i++, Prediction = p }).OrderByDescending(p => p.Prediction).Take(10);
+            imager.Boxes = prediction.PredictedBoxes.Take(10).ToArray();
 
-            var model = LoadModel(this.Path);
-            var probs = PredictDataUsingModel(imageDataView, model);
-            YoloOutputParser parser = new YoloOutputParser();
-
-            var boundingBoxes =
-                probs
-                .Select(probability => parser.ParseOutputs(probability))
-                .Select(boxes => parser.FilterBoundingBoxes(boxes, 5, .5F));
-
-            var _ = boundingBoxes.First();
-            return probs;
+            return imager;
         }
     }
 }

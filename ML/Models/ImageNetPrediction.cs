@@ -4,7 +4,9 @@ namespace ML.Data
 
     public class ImageNetPrediction
     {
-        [ColumnName("grid")]
-        public float[] PredictedLabels;
+        public long[] PredictedLabels;
+        public float[] PredictedScores;
+        public float[][] PredictedBoxes;
+
     }
 }

@@ -43,7 +43,7 @@ namespace Files
         {
             var imgr = new Images.Imager(filename);
             imgr.Rect = rect.ConvertToRect();
-            var croppedImgAsBytes = imgr.CropAndConvertToBytes();
+            imgr.CropAndResize();
 
             var newPath = System.IO.Path.Combine(Path, className);
             if (!Directory.Exists(newPath))
@@ -51,21 +51,21 @@ namespace Files
                 Directory.CreateDirectory(newPath);
             }
             var filepath = System.IO.Path.Combine(newPath, $"{System.IO.Path.GetFileNameWithoutExtension(filename)}_{counter.ToString()}({confidence.ToString("P0")}){System.IO.Path.GetExtension(filename)}");
-            File.WriteAllBytes(filepath, croppedImgAsBytes);
+
+            imgr.Save(filepath);
             _log.LogInformation($", {filename}, {className}, {confidence}");
+
         }
 
         public void WriteMetaData(string filename, Dictionary<string, List<(int[], string)>> value)
         {
             var imgr = new Images.Imager(filename);
-            var commentField = MetaProperty.ImageDescription;
 
-            var lables = string.Join(',',value.Select(x=>x.Key)); 
-            imgr.Image.SetMetaValue(commentField, lables);
+            var lables = string.Join(',', value.Select(x => x.Key));
+            imgr.AsImage.SetMetaValue(lables);
 
             var filepath = System.IO.Path.Combine(Path, System.IO.Path.GetFileName(filename));
-            imgr.Image.Save(filepath);
-            //File.WriteAllBytes(filepath, imgr.Image.Crop(imgr.Image.Size.Width, imgr.Image.Size.Height,0,0));             
+            imgr.Save(filepath);        
         }
     }
 }

@@ -1,34 +1,34 @@
 using System;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
+
 using System.IO;
 using System.Linq;
 using System.Text;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 
 namespace Images
 {
     public static class ImagerExtensions
     {
-        public static byte[] Crop(this Image image, Rectangle rect){
+        public static byte[] Crop(this System.Drawing.Image image, Rectangle rect){
             return image.Crop(rect.Width,rect.Height,rect.X,rect.Y);
         }
 
-        public static byte[] Crop(this Image image, int Width, int Height, int X, int Y)
+        public static byte[] Crop(this System.Drawing.Image image, int Width, int Height, int X, int Y)
         {
             try
             {
-                using (Image originalImage = image)
+                using (System.Drawing.Image originalImage = image)
                 {
-                    using (Bitmap bmp = new Bitmap(Width, Height))
+                    using (System.Drawing.Bitmap bmp = new System.Drawing.Bitmap(Width, Height))
                     {
                         bmp.SetResolution(originalImage.HorizontalResolution, originalImage.VerticalResolution);
-                        using (Graphics Graphic = Graphics.FromImage(bmp))
+                        using (System.Drawing.Graphics Graphic = System.Drawing.Graphics.FromImage(bmp))
                         {
-                            Graphic.SmoothingMode = SmoothingMode.AntiAlias;
-                            Graphic.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                            Graphic.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                            Graphic.DrawImage(originalImage, new Rectangle(0, 0, Width, Height), X, Y, Width, Height, GraphicsUnit.Pixel);
+                            Graphic.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                            Graphic.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                            Graphic.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                            Graphic.DrawImage(originalImage, new System.Drawing.Rectangle(0, 0, Width, Height), X, Y, Width, Height, System.Drawing.GraphicsUnit.Pixel);
                             MemoryStream ms = new MemoryStream();
                             bmp.Save(ms, originalImage.RawFormat);
                             return ms.GetBuffer();
@@ -47,9 +47,14 @@ namespace Images
             return new Rectangle((int)(rect[0]-rect[2]*0.5),(int)(rect[1]-rect[3]*0.5),rect[2],rect[3]);
         }
     
-        public static Bitmap SetMetaValue(this Bitmap sourceBitmap, MetaProperty property, string value)  
-        {  
-            PropertyItem prop = sourceBitmap.PropertyItems[0];  
+        public static Image SetMetaValue(this Image sourceBitmap, string value)  {
+            sourceBitmap.Metadata.ExifProfile.SetValue(ExifTag.ImageDescription, value);
+            return sourceBitmap;
+        }
+
+        public static System.Drawing.Bitmap SetMetaValue(this System.Drawing.Bitmap sourceBitmap, MetaProperty property, string value)  
+        {
+            System.Drawing.Imaging.PropertyItem prop = sourceBitmap.PropertyItems[0];  
             int iLen = value.Length + 1;  
             byte[] bTxt = new Byte[iLen];  
             for (int i = 0; i < iLen - 1; i++)  
@@ -63,9 +68,9 @@ namespace Images
             return sourceBitmap;  
         }  
 
-        public static Image SetMetaValue(this Image sourceImage, MetaProperty property, string value)  
-        {  
-            PropertyItem prop = sourceImage.PropertyItems[0];  
+        public static System.Drawing.Image SetMetaValue(this System.Drawing.Image sourceImage, MetaProperty property, string value)  
+        {
+            System.Drawing.Imaging.PropertyItem prop = sourceImage.PropertyItems[0];  
             int iLen = value.Length + 1;  
             byte[] bTxt = new Byte[iLen];  
             for (int i = 0; i < iLen - 1; i++)  
@@ -79,9 +84,9 @@ namespace Images
             return sourceImage;  
         } 
 
-        public static string GetMetaValue(this Bitmap sourceBitmap, MetaProperty property)  
-        {  
-            PropertyItem[] propItems = sourceBitmap.PropertyItems;  
+        public static string GetMetaValue(this System.Drawing.Bitmap sourceBitmap, MetaProperty property)  
+        {
+            System.Drawing.Imaging.PropertyItem[] propItems = sourceBitmap.PropertyItems;  
             var prop = propItems.FirstOrDefault(p => p.Id == (int)property);  
             if (prop != null)  
             {  
@@ -92,9 +97,9 @@ namespace Images
                 return null;  
             }  
         }  
-        public static string GetMetaValue(this Image sourceImage, MetaProperty property)  
+        public static string GetMetaValue(this System.Drawing.Image sourceImage, MetaProperty property)  
         {  
-            return ((Bitmap)sourceImage).GetMetaValue(property);
+            return ((System.Drawing.Bitmap)sourceImage).GetMetaValue(property);
         } 
     }
 }

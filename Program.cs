@@ -10,8 +10,9 @@ using Serilog;
 using Files;
 using PipelineImplementations.BlockingCollection;
 using System.IO;
+using System.Linq;
 
-namespace Temp
+namespace EntityExtractor
 {
     class Program
     {
@@ -30,8 +31,11 @@ namespace Temp
             {
                 await Task.Run(() =>
                 {
-                    var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"), args[0]);
-                    var result = detector.RunDetection();
+                    var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"));
+                    var firstFile = Directory.GetFiles( args[0],"ispy_2019-06-20_08*").Last();
+                    var imgr=detector.RunDetection(firstFile);
+                    imgr.DrawDetections();
+                    imgr.Save(Path.Combine(".\\testoutput\\", Path.GetFileName(imgr.PathOfFile)));
                 });
                 //await RunAsync(args[0], args[1], logger);
 
