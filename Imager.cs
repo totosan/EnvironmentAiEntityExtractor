@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using ML.Data;
+using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Formats;
@@ -13,8 +15,7 @@ namespace Images
         public Image<Rgb24> AsImage { get; set; }
         public Rectangle Rect { get; set; }
 
-        public float[][] Boxes { get; set; }
-
+        public ImageNetPrediction DetectionResults { get; set; }
         public string PathOfFile { get; set; }
 
         public IImageFormat ImageFormat { get => imageFormat; }
@@ -32,16 +33,20 @@ namespace Images
 
         public void DrawDetections()
         {
-
-            foreach (var box in Boxes)
+            int i = 0;
+            foreach (var box in this.DetectionResults.PredictedBoxes)
             {
                 var width = box[2] - box[0];
                 var height = box[3] - box[1];
                 var rect = new RectangleF(box[0] * this.AsImage.Width, box[1] * this.AsImage.Height, width * this.AsImage.Width, height * this.AsImage.Height);
-                this.AsImage.Mutate(x => x.Draw(
-                    Rgba32.ParseHex("ff22dd"),
-                    2,
-                    rect));
+                this.AsImage.Mutate(x =>
+                {
+                    x.Draw(Rgba32.ParseHex("2222dd"),2,rect);
+                    FontCollection collection = new FontCollection();
+                    FontFamily family = collection.Install("C:\\Program Files\\Microsoft Office\\root\\vfs\\Fonts\\private\\ARIALN.TTF");
+                    Font font = family.CreateFont(12, FontStyle.Italic);
+                    x.DrawText(this.DetectionResults.PredictedLabels[i].ToString(), font, Color.AliceBlue, new PointF(rect.X,rect.Y));
+                });
             }
 
         }

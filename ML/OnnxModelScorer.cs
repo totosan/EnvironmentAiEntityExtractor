@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using General;
 using Images;
@@ -17,10 +18,14 @@ namespace ML
     public class OnnxModelScorer
     {
         private string imagesFolder;
+
+        public string[] Lables { get; }
+
         private InferenceSession session;
 
-        public OnnxModelScorer(string modelPath)
+        public OnnxModelScorer(string modelPath, string labelPath)
         {
+            this.Lables = File.ReadLines(labelPath).ToArray();
             this.session = new InferenceSession(modelPath);
         }
 
@@ -46,10 +51,7 @@ namespace ML
                 }
             }
 
-            var inputs = new List<NamedOnnxValue>
-                            {
-                                NamedOnnxValue.CreateFromTensor("data", input)
-                            };
+            var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("data", input) };
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
 
             ImageNetPrediction resultDict = new ImageNetPrediction();
@@ -65,11 +67,7 @@ namespace ML
         {
             var imager = new Imager(imagePath);
             var prediction = PredictDataUsingModel(imager);
-            var i = 0;
-            var best = (from p in prediction.PredictedScores
-                        select new { Index = i++, Prediction = p }).OrderByDescending(p => p.Prediction).Take(10);
-            imager.Boxes = prediction.PredictedBoxes.Take(10).ToArray();
-
+            imager.DetectionResults = prediction.GetBestResults(3);
             return imager;
         }
     }

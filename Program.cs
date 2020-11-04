@@ -32,17 +32,20 @@ namespace EntityExtractor
                 await Task.Run(() =>
                 {
                     var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"));
-                    var firstFile = Directory.GetFiles( args[0],"ispy_2019-06-20_08*").Last();
-                    var imgr=detector.RunDetection(firstFile);
-                    imgr.DrawDetections();
-                    imgr.Save(Path.Combine(".\\testoutput\\", Path.GetFileName(imgr.PathOfFile)));
+                    var allFiles = Directory.GetFiles(args[0], "ispy_2019-06-20_08*");
+                    foreach (var file in allFiles)
+                    {
+                        var imgr = detector.RunDetection(file);
+                        imgr.DrawDetections();
+                        imgr.Save(Path.Combine(".\\testoutput\\", Path.GetFileName(imgr.PathOfFile)));
+                    }
                 });
                 //await RunAsync(args[0], args[1], logger);
 
-                                while (Console.ReadKey(true).Key != ConsoleKey.Escape)
-                                {
-                                    await Task.Delay(100);
-                                }
+                while (Console.ReadKey(true).Key != ConsoleKey.Escape)
+                {
+                    await Task.Delay(100);
+                }
             }
             else
             {
