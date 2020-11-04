@@ -31,7 +31,7 @@ namespace EntityExtractor
             {
                 await Task.Run(() =>
                 {
-                    var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"));
+                    var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"), GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\labels.txt"));
                     var allFiles = Directory.GetFiles(args[0], "ispy_2019-06-20_08*");
                     foreach (var file in allFiles)
                     {

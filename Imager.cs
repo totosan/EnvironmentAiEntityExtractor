@@ -30,7 +30,6 @@ namespace Images
             this.PathOfFile = path;
             this.AsImage = Image.Load<Rgb24>(path, out imageFormat);
         }
-
         public void DrawDetections()
         {
             int i = 0;
@@ -41,11 +40,13 @@ namespace Images
                 var rect = new RectangleF(box[0] * this.AsImage.Width, box[1] * this.AsImage.Height, width * this.AsImage.Width, height * this.AsImage.Height);
                 this.AsImage.Mutate(x =>
                 {
-                    x.Draw(Rgba32.ParseHex("2222dd"),2,rect);
+                    x.Draw(Rgba32.ParseHex("2222dd"), 2, rect);
                     FontCollection collection = new FontCollection();
                     FontFamily family = collection.Install("C:\\Program Files\\Microsoft Office\\root\\vfs\\Fonts\\private\\ARIALN.TTF");
-                    Font font = family.CreateFont(12, FontStyle.Italic);
-                    x.DrawText(this.DetectionResults.PredictedLabels[i].ToString(), font, Color.AliceBlue, new PointF(rect.X,rect.Y));
+                    Font font = family.CreateFont(12, FontStyle.Regular);
+                    var text = $"{this.DetectionResults.PredictedLabels[i].ToString()} {this.DetectionResults.PredictedScores[i].ToString("p")}";
+                    x.DrawText(text, font, Color.AliceBlue, new PointF(rect.X, rect.Y));
+                    i++;
                 });
             }
 

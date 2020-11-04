@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using General;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using ML.Data;
@@ -26,6 +28,22 @@ namespace EntityExtractor
 
             var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("data", input) };
             return inputs;
+        }
+
+        public static string[] GetLabelResult(this IDisposableReadOnlyCollection<DisposableNamedOnnxValue> values, string[] labels)
+        {
+            var labelNumbers = values.First(x => x.Name == "detected_classes").AsTensor<Int64>();
+            return labelNumbers.Select(l=>labels[l]).ToArray();
+        }
+        public static float[][] GetBoxesResult(this IDisposableReadOnlyCollection<DisposableNamedOnnxValue> values)
+        {
+            var boxes = values.First(x => x.Name == "detected_boxes").AsTensor<Single>().ToArray();
+            var convertedBoxes = boxes.Split(4).Select(x => x.ToArray()).ToArray();
+            return convertedBoxes;
+        }
+        public static float[] GetScoreResult(this IDisposableReadOnlyCollection<DisposableNamedOnnxValue> values)
+        {
+            return values.First(x => x.Name == "detected_scores").AsTensor<float>().ToArray();
         }
     }
 }
