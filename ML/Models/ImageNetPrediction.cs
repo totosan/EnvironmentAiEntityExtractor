@@ -13,10 +13,10 @@ namespace ML.Data
         public float[] PredictedScores;
         public float[][] PredictedBoxes;
 
-        public ImageNetPrediction GetBestResults(int bestCount)
+        public ImageNetPrediction GetBestResults(int bestCount, float confidence)
         {
             var rearranged= this.PredictedScores.Select((x,index)=> new { Index = index, Prediction = x });
-            var bestAll = rearranged.Where(p=>p.Prediction >=0.3f).OrderByDescending(p => p.Prediction);
+            var bestAll = rearranged.Where(p=>p.Prediction >= confidence).OrderByDescending(p => p.Prediction);
             var best= bestAll.Take(bestCount);
             return new ImageNetPrediction
             {

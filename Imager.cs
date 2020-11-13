@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using ML.Data;
 using SixLabors.Fonts;
@@ -49,7 +50,7 @@ namespace Images
                     i++;
                 });
             }
-
+            this.AsImage.SetMetaValue(string.Join(',', this.DetectionResults.PredictedLabels));
         }
 
         public void Save(string path)

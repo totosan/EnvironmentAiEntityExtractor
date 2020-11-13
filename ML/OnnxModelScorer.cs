@@ -37,7 +37,8 @@ namespace ML
             Console.WriteLine("=====Identify the objects in the images=====");
             Console.WriteLine("");
 
-            imgr.Resize(SixLabors.ImageSharp.Processing.ResizeMode.Stretch);
+            imgr.CropAndResize();
+            //imgr.Resize(SixLabors.ImageSharp.Processing.ResizeMode.Stretch);
             var inputs = imgr.AsImage.GetInputsFromImage();
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
 
@@ -52,7 +53,7 @@ namespace ML
         {
             var imager = new Imager(imagePath);
             var prediction = PredictDataUsingModel(imager);
-            imager.DetectionResults = prediction.GetBestResults(3);
+            imager.DetectionResults = prediction.GetBestResults(5, 0.2f);
             if (!imager.DetectionResults.IsEmpty)
                 Console.WriteLine($"{imager.DetectionResults.PredictedLabels[0]} -> {imager.DetectionResults.PredictedScores[0]}");
             return imager;

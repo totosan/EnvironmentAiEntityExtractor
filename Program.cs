@@ -11,6 +11,7 @@ using Files;
 using PipelineImplementations.BlockingCollection;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 
 namespace EntityExtractor
 {
@@ -27,18 +28,43 @@ namespace EntityExtractor
             _svcProv = Configure();
             var logger = _svcProv.GetService<ILogger<Program>>();
 
-            if (args.Length == 2)
+            if (args.Length >= 2 && args.Length <= 3)
             {
+                bool subFolder = args.Length == 3 && args[2]=="-s";
+
                 await Task.Run(() =>
                 {
+                    var allFiles = Directory.GetFiles(args[0], "ispy_2019-11-2*");
                     var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"), GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\labels.txt"));
-                    var allFiles = Directory.GetFiles(args[0], "ispy_2019-06-20_08*");
-                    foreach (var file in allFiles)
-                    {
-                        var imgr = detector.RunDetection(file);
-                        imgr.DrawDetections();
-                        imgr.Save(Path.Combine(".\\testoutput\\", Path.GetFileName(imgr.PathOfFile)));
-                    }
+                    var timer = new Stopwatch();
+                    timer.Start();
+                    Parallel.ForEach(allFiles, new ParallelOptions() { MaxDegreeOfParallelism = Convert.ToInt32(Environment.ProcessorCount * 0.5f) }, (file) =>
+                              {
+                                  var imgr = detector.RunDetection(file);
+                                  imgr.DrawDetections();
+                                  if (!imgr.DetectionResults.IsEmpty)
+                                  {
+                                      var rootfolder = GetAbsolutePath(args[1]);
+                                      if (subFolder) //sort into seperate folder
+                                      {
+                                          foreach (var label in imgr.DetectionResults.PredictedLabels)
+                                          {
+                                              var folder = GetAbsolutePath(Path.Combine(rootfolder, label));
+                                              if (!Directory.Exists(folder))
+                                              {
+                                                  Directory.CreateDirectory(folder);
+                                              }
+                                              imgr.Save(Path.Combine(folder, Path.GetFileName(imgr.PathOfFile)));
+                                          }
+                                      }
+                                      else
+                                      {
+                                          imgr.Save(Path.Combine(rootfolder, Path.GetFileName(imgr.PathOfFile)));
+                                      }
+                                  }
+                              });
+                    timer.Stop();
+                    Console.WriteLine($"Completed run in {timer.ElapsedMilliseconds / 1000f}s with {allFiles.Count()} files");
                 });
                 //await RunAsync(args[0], args[1], logger);
 
@@ -49,7 +75,10 @@ namespace EntityExtractor
             }
             else
             {
-                Console.WriteLine("Usage: EntityExtractor.exe <folder with pics> <folder for output>");
+                Console.WriteLine("Usage: EntityExtractor.exe <folder with pics> <folder for output> [-s]");
+                Console.WriteLine(" <folder with pics>: source folder containing images");
+                Console.WriteLine(" <folder for output>: target folder, where to put the rendered pics wiht detections");
+                Console.WriteLine(" -s for creating sub folders with images sorted by detection in image\r\n\telse, images will be saved directly to target folder");
             }
         }
 
