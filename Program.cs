@@ -19,7 +19,7 @@ namespace Temp
             EntityExtractor.exe <input folder> <output folder>
         
         */
-        private const string Url = "http://localhost:32083/detect";
+        private const string Url = "http://localhost:3030/image";
         private static ServiceProvider _svcProv;
         static async Task Main(string[] args)
         {

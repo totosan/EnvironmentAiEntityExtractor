@@ -32,7 +32,7 @@ namespace ImageUpload
             for (int i = 0; i < files.Length; i++)
             {
                 memStream.Write(boundarybytes, 0, boundarybytes.Length);
-                var header = string.Format(headerTemplate, "image_file", files[i]);
+                var header = string.Format(headerTemplate, "imageData", files[i]);
                 var headerbytes = System.Text.Encoding.UTF8.GetBytes(header);
 
                 memStream.Write(headerbytes, 0, headerbytes.Length);
