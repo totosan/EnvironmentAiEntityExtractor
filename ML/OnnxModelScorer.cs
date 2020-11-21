@@ -2,21 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using General;
-using Images;
+using EntityExtractor.Images;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using ML.Data;
-using ML.Helper;
+using EntityExtractor.ML.Data;
+using EntityExtractor.ML.Helper;
 using SixLabors.ImageSharp.PixelFormats;
 using EntityExtractor;
+using EntityExtractor.ML.Interfaces;
 
-namespace ML
+namespace EntityExtractor.ML
 {
-
-    public class OnnxModelScorer
+    public class OnnxModelScorer: IModelScorer
     {
         private string imagesFolder;
 

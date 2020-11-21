@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using General;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using ML.Data;
+using EntityExtractor.ML.Data;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using EntityExtractor.Extensions;
 
-namespace EntityExtractor
+namespace EntityExtractor.ML
 {
     public static class DetectionExtensions
     {
