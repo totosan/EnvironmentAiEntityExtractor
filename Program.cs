@@ -13,7 +13,7 @@ using System.IO;
 
 namespace Temp
 {
-    class Program
+    partial class Program
     {
         /*
             EntityExtractor.exe <input folder> <output folder>
@@ -28,17 +28,12 @@ namespace Temp
 
             if (args.Length == 2)
             {
-                await Task.Run(() =>
-                {
-                    var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"), args[0]);
-                    var result = detector.RunDetection();
-                });
-                //await RunAsync(args[0], args[1], logger);
+                await RunAsync(args[0], args[1], logger);
 
-                                while (Console.ReadKey(true).Key != ConsoleKey.Escape)
-                                {
-                                    await Task.Delay(100);
-                                }
+                while (Console.ReadKey(true).Key != ConsoleKey.Escape)
+                {
+                    await Task.Delay(100);
+                }
             }
             else
             {
@@ -72,7 +67,7 @@ namespace Temp
                 var grabbedFiles = grabber.GetFiles();
 
                 var library = new Dictionary<string, List<(int[], string)>>();
-                var pipeline = GetCastingPipeline(filePutter);
+                var pipeline = GetObjectDetectionPipeline(filePutter);
 
                 int cnt = 0;
                 var tsk = System.Threading.Tasks.Task.Run(async () =>
@@ -89,13 +84,7 @@ namespace Temp
                 Console.WriteLine("Finished Pipeline");
             });
         }
-
-        class DetectionOutputPoco
-        {
-            public JArray Detections { get; set; }
-            public string File { get; set; }
-        }
-        private static DetectionOutputPoco GetDetections(string file)
+        private static DetectionOutputPoco GetDetectionsStep(string file)
         {
             if (string.IsNullOrWhiteSpace(file))
             {
@@ -113,14 +102,7 @@ namespace Temp
             return null;
         }
 
-
-        class WriteFileOutputPoco
-        {
-            public string File { get; set; }
-            public Dictionary<string, List<(int[], string)>> Library { get; set; }
-        }
-
-        private static WriteFileOutputPoco GetLabels(DetectionOutputPoco detectionResult)
+        private static WriteFileOutputPoco GetLabelsStep(DetectionOutputPoco detectionResult)
         {
             JArray yoloResult;
             string file;
@@ -145,7 +127,7 @@ namespace Temp
             return null;
         }
 
-        private static Dictionary<string, List<(int[], string)>> WriteFileOutput(FilePutter filePutter, WriteFileOutputPoco outputPoco)
+        private static Dictionary<string, List<(int[], string)>> WriteFileOutputStep(FilePutter filePutter, WriteFileOutputPoco outputPoco)
         {
             if (outputPoco == null)
             {
@@ -155,13 +137,13 @@ namespace Temp
             return outputPoco.Library;
         }
 
-        private static IAwaitablePipeline<Dictionary<string, List<(int[], string)>>> GetCastingPipeline(FilePutter filePutter)
+        private static IAwaitablePipeline<Dictionary<string, List<(int[], string)>>> GetObjectDetectionPipeline(FilePutter filePutter)
         {
             var builder = new CastingPipelineWithAwait<Dictionary<string, List<(int[], string)>>>();
             builder.AddStep(input => input as string, 2, 10);
-            builder.AddStep(input => GetDetections(input as string), 3, 10);
-            builder.AddStep(input => GetLabels((input as DetectionOutputPoco)), 1, 10);
-            builder.AddStep(input => WriteFileOutput(filePutter, input as WriteFileOutputPoco), 1, 10);
+            builder.AddStep(input => GetDetectionsStep(input as string), 3, 10);
+            builder.AddStep(input => GetLabelsStep((input as DetectionOutputPoco)), 1, 10);
+            builder.AddStep(input => WriteFileOutputStep(filePutter, input as WriteFileOutputPoco), 1, 10);
             var pipeline = builder.GetPipeline();
             return pipeline;
         }
