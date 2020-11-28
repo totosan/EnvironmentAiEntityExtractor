@@ -15,6 +15,7 @@ namespace EntityExtractor.Images
     public class Imager
     {
         public Image<Rgb24> AsImage { get; set; }
+        public Image<Rgb24> AsOriginalImage { get; set; }
         public Rectangle Rect { get; set; }
 
         public ImageNetPrediction DetectionResults { get; set; }
@@ -31,8 +32,9 @@ namespace EntityExtractor.Images
             }
             this.PathOfFile = path;
             this.AsImage = Image.Load<Rgb24>(path, out imageFormat);
+            this.AsOriginalImage = this.AsImage.Clone();
         }
-        public void DrawDetections()
+        public void MarkDetectionsInImage()
         {
             int i = 0;
             foreach (var box in this.DetectionResults.PredictedBoxes)
@@ -54,11 +56,30 @@ namespace EntityExtractor.Images
             this.AsImage.SetMetaValue(string.Join(',', this.DetectionResults.PredictedLabels));
         }
 
+        public Dictionary<string, List<Image<Rgb24>>> GetDetectionsAsImages()
+        {
+            if (this.DetectionResults.PredictedBoxes == null || this.DetectionResults.PredictedBoxes.Length == 0)
+                return null;
+            var lib = new Dictionary<string, List<Image<Rgb24>>>();
+            int i = 0;
+
+            foreach (var box in this.DetectionResults.PredictedBoxes)
+            {
+                string label = this.DetectionResults.PredictedLabels[i].ToString();
+                if (!lib.ContainsKey(label))
+                {
+                    lib.Add(label, new List<Image<Rgb24>>());
+                }
+
+                lib[label].Add(CloneCropped(box.ConvertResizedToRect(this.AsImage.Width, this.AsImage.Height)));
+            }
+            return lib;
+        }
         public void Save(string path)
         {
             this.AsImage.SaveAsJpeg(path);
         }
-        public void CropAndResize()
+        public void CropSquared()
         {
             this.AsImage.Mutate(x =>
                                         {
@@ -80,6 +101,11 @@ namespace EntityExtractor.Images
                                                 Mode = mode
                                             });
                                         });
+        }
+
+        public Image<Rgb24> CloneCropped(RectangleF rect)
+        {
+            return this.AsImage.Clone(x => x.Crop((Rectangle)rect));
         }
     }
 }

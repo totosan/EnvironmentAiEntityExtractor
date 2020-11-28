@@ -8,6 +8,6 @@ namespace EntityExtractor.ML.Interfaces
     public interface IModelScorer
     {
         string[] Lables { get; }
-        Imager RunDetection(string imagePath);
+        Imager RunDetection(Imager imgr);
     }
 }

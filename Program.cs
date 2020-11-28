@@ -7,6 +7,8 @@ using Serilog;
 using System.IO;
 using System.Linq;
 using System.Diagnostics;
+using EntityExtractor.Images;
+using SixLabors.ImageSharp;
 
 namespace EntityExtractor
 {
@@ -24,7 +26,7 @@ namespace EntityExtractor
 
             if (args.Length >= 2 && args.Length <= 3)
             {
-                bool subFolder = args.Length == 3 && args[2]=="-s";
+                bool subFolder = args.Length == 3 && args[2] == "-s";
 
                 await Task.Run(() =>
                 {
@@ -34,21 +36,32 @@ namespace EntityExtractor
                     timer.Start();
                     Parallel.ForEach(allFiles, new ParallelOptions() { MaxDegreeOfParallelism = Convert.ToInt32(Environment.ProcessorCount * 0.5f) }, (file) =>
                               {
-                                  var imgr = detector.RunDetection(file);
-                                  imgr.DrawDetections();
+                                  // per Image
+
+                                  var imgr = new Imager(file);
+
+                                  detector.RunDetection(imgr);
+
                                   if (!imgr.DetectionResults.IsEmpty)
                                   {
+                                      var objects = imgr.GetDetectionsAsImages();
+
                                       var rootfolder = GetAbsolutePath(args[1]);
                                       if (subFolder) //sort into seperate folder
                                       {
-                                          foreach (var label in imgr.DetectionResults.PredictedLabels)
+                                          // per results (objects detected)
+                                          foreach (var obj in objects)
                                           {
+                                              var label = obj.Key;
                                               var folder = GetAbsolutePath(Path.Combine(rootfolder, label));
                                               if (!Directory.Exists(folder))
                                               {
                                                   Directory.CreateDirectory(folder);
                                               }
-                                              imgr.Save(Path.Combine(folder, Path.GetFileName(imgr.PathOfFile)));
+                                              foreach (var im in obj.Value)
+                                              {
+                                                  im.SaveAsJpeg(Path.Combine(folder, Path.GetFileName(imgr.PathOfFile)));
+                                              }
                                           }
                                       }
                                       else

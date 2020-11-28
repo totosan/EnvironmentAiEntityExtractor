@@ -36,7 +36,7 @@ namespace EntityExtractor.ML
             Console.WriteLine("=====Identify the objects in the images=====");
             Console.WriteLine("");
 
-            imgr.CropAndResize();
+            imgr.CropSquared();
             //imgr.Resize(SixLabors.ImageSharp.Processing.ResizeMode.Stretch);
             var inputs = imgr.AsImage.GetInputsFromImage();
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
@@ -48,9 +48,8 @@ namespace EntityExtractor.ML
             return resultDict;
         }
 
-        public Imager RunDetection(string imagePath)
+        public Imager RunDetection(Imager imager)
         {
-            var imager = new Imager(imagePath);
             var prediction = PredictDataUsingModel(imager);
             imager.DetectionResults = prediction.GetBestResults(5, 0.2f);
             if (!imager.DetectionResults.IsEmpty)
