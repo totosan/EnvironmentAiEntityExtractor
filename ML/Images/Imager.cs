@@ -65,13 +65,17 @@ namespace EntityExtractor.Images
 
             foreach (var box in this.DetectionResults.PredictedBoxes)
             {
+                var convertedBox = (Rectangle)box.ConvertAndResizedToRectF(this.AsImage.Width, this.AsImage.Height);
+                if (convertedBox.Width == 0 || convertedBox.Height == 0)
+                    break;
                 string label = this.DetectionResults.PredictedLabels[i].ToString();
                 if (!lib.ContainsKey(label))
                 {
                     lib.Add(label, new List<Image<Rgb24>>());
                 }
 
-                lib[label].Add(CloneCropped(box.ConvertResizedToRect(this.AsImage.Width, this.AsImage.Height)));
+                lib[label].Add(CloneCropped(convertedBox));
+                i++;
             }
             return lib;
         }
@@ -103,7 +107,7 @@ namespace EntityExtractor.Images
                                         });
         }
 
-        public Image<Rgb24> CloneCropped(RectangleF rect)
+        public Image<Rgb24> CloneCropped(Rectangle rect)
         {
             return this.AsImage.Clone(x => x.Crop((Rectangle)rect));
         }

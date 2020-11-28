@@ -49,18 +49,19 @@ namespace EntityExtractor.Extensions
             //  center X [0] / center y [1] / height [2] / width [3]
             return new Rectangle((int)(rect[0] - rect[2] * 0.5), (int)(rect[1] - rect[3] * 0.5), rect[2], rect[3]);
         }
-        public static RectangleF ConvertResizedToRect(this float[] box, int tWidth, int tHeight)
+        public static RectangleF ConvertAndResizedToRectF(this float[] box, int tWidth, int tHeight)
         {
-            box[0] = box[0]<0.0?0.0f:box[0]>1.0?0.99f:box[0];
-            box[1] = box[1]<0.0?0.0f:box[1]>1.0?0.99f:box[1];
-            box[2] = box[2]<0.0?0.0f:box[2]>1.0?0.99f:box[2];
-            box[3] = box[3]<0.0?0.0f:box[3]>1.0?0.99f:box[3];
-            
+            box[0] = box[0] < 0.0 ? 0.0f : box[0] > 1.0 ? 0.99f : box[0];
+            box[1] = box[1] < 0.0 ? 0.0f : box[1] > 1.0 ? 0.99f : box[1];
+            box[2] = box[2] < 0.0 ? 0.0f : box[2] > 1.0 ? 0.99f : box[2];
+            box[3] = box[3] < 0.0 ? 0.0f : box[3] > 1.0 ? 0.99f : box[3];
+
             var width = box[2] - box[0];
             var height = box[3] - box[1];
             var rect = new RectangleF(box[0] * width, box[1] * tHeight, width * tWidth, height * tHeight);
             return rect;
         }
+
         public static Image SetMetaValue(this Image sourceBitmap, string value)
         {
             if (!string.IsNullOrWhiteSpace(value))
