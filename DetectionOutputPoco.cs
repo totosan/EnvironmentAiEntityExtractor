@@ -6,7 +6,7 @@ namespace Temp
     {
         class DetectionOutputPoco
         {
-            public JArray Detections { get; set; }
+            public JObject Detections { get; set; }
             public string File { get; set; }
         }
     }

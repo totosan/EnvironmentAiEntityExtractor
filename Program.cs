@@ -10,6 +10,7 @@ using Serilog;
 using Files;
 using PipelineImplementations.BlockingCollection;
 using System.IO;
+using EntityExtractor.ML.Model;
 
 namespace Temp
 {
@@ -19,7 +20,7 @@ namespace Temp
             EntityExtractor.exe <input folder> <output folder>
         
         */
-        private const string Url = "http://localhost:3030/image";
+        private const string Url = "http://localhost:3031/image";
         private static ServiceProvider _svcProv;
         static async Task Main(string[] args)
         {
@@ -97,30 +98,33 @@ namespace Temp
             if (resultString != "[]")
             {
                 Console.Write($"{file} :");
-                return new DetectionOutputPoco() { Detections = Newtonsoft.Json.JsonConvert.DeserializeObject<JArray>(resultString), File = file };
+                return new DetectionOutputPoco() { Detections = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(resultString), File = file };
             }
             return null;
         }
 
         private static WriteFileOutputPoco GetLabelsStep(DetectionOutputPoco detectionResult)
         {
-            JArray yoloResult;
+            JObject detectorResult;
             string file;
             if (detectionResult == null)
                 return null;
 
-            yoloResult = detectionResult.Detections;
+            detectorResult = detectionResult.Detections;
             file = detectionResult.File;
 
-            if (yoloResult != null && yoloResult.Count > 0)
+            if (detectorResult != null && detectorResult["predictions"].HasValues)
             {
                 var libraryLocal = new Dictionary<string, List<(int[], string)>>();
-                for (var i = 0; i < yoloResult.Count; i++)
+                for (var i = 0; i < ((JArray)detectorResult["predictions"]).Count; i++)
                 {
-                    if (!libraryLocal.ContainsKey(yoloResult[i][0].ToString()))
-                        libraryLocal[yoloResult[i][0].ToString()] = new List<(int[], string)>();
-                    libraryLocal[yoloResult[i][0].ToString()].Add((yoloResult[i][2].ToObject<int[]>(), file));
-                    Console.Write($" {yoloResult[i][0]} ({yoloResult[i][1]})");
+                    var prediction = detectorResult["predictions"][i];
+                    if (prediction["probability"].ToObject<float>() < 0.30)
+                        continue;
+                    if (!libraryLocal.ContainsKey(prediction["tagName"].ToString()))
+                        libraryLocal[prediction["tagName"].ToString()] = new List<(int[], string)>();
+                    libraryLocal[prediction["tagName"].ToString()].Add((prediction["boundingBox"].ToObject<MyBoundingBox>().ConvertToIntArray(), file));
+                    Console.Write($" {prediction["tagName"]} ({prediction["probability"]})");
                 }
                 return new WriteFileOutputPoco() { Library = libraryLocal, File = file };
             }
@@ -129,7 +133,7 @@ namespace Temp
 
         private static Dictionary<string, List<(int[], string)>> WriteFileOutputStep(FilePutter filePutter, WriteFileOutputPoco outputPoco)
         {
-            if (outputPoco == null)
+            if (outputPoco == null || outputPoco.Library.Count==0)
             {
                 return null;
             }
@@ -140,10 +144,11 @@ namespace Temp
         private static IAwaitablePipeline<Dictionary<string, List<(int[], string)>>> GetObjectDetectionPipeline(FilePutter filePutter)
         {
             var builder = new CastingPipelineWithAwait<Dictionary<string, List<(int[], string)>>>();
-            builder.AddStep(input => input as string, 2, 10);
-            builder.AddStep(input => GetDetectionsStep(input as string), 3, 10);
-            builder.AddStep(input => GetLabelsStep((input as DetectionOutputPoco)), 1, 10);
-            builder.AddStep(input => WriteFileOutputStep(filePutter, input as WriteFileOutputPoco), 1, 10);
+            var parallel = 2;
+            builder.AddStep(input => input as string, parallel, 10);
+            builder.AddStep(input => GetDetectionsStep(input as string), parallel, 10);
+            builder.AddStep(input => GetLabelsStep((input as DetectionOutputPoco)), parallel, 10);
+            builder.AddStep(input => WriteFileOutputStep(filePutter, input as WriteFileOutputPoco), parallel, 10);
             var pipeline = builder.GetPipeline();
             return pipeline;
         }

@@ -39,7 +39,7 @@ namespace Files
             _log = log;
         }
 
-        public void SaveCroppedImage(string filename, int counter, string className, float confidence, int[] rect)
+        public void SaveCroppedImageToSeperateFolders(string filename, int counter, string className, float confidence, int[] rect)
         {
             var imgr = new Images.Imager(filename);
             imgr.Rect = rect.ConvertToRect();
