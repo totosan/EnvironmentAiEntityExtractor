@@ -31,11 +31,11 @@ namespace EntityExtractor.ML
 
         private ImageNetPrediction PredictDataUsingModel(Imager imgr)
         {
-            Console.WriteLine($"Images location: {imgr.PathOfFile}");
+/*            Console.WriteLine($"Images location: {imgr.PathOfFile}");
             Console.WriteLine("");
             Console.WriteLine("=====Identify the objects in the images=====");
             Console.WriteLine("");
-
+*/
             imgr.CropSquared();
             //imgr.Resize(SixLabors.ImageSharp.Processing.ResizeMode.Stretch);
             var inputs = imgr.AsImage.GetInputsFromImage();
@@ -52,8 +52,8 @@ namespace EntityExtractor.ML
         {
             var prediction = PredictDataUsingModel(imager);
             imager.DetectionResults = prediction.GetBestResults(5, 0.2f);
-            if (!imager.DetectionResults.IsEmpty)
-                Console.WriteLine($"{imager.DetectionResults.PredictedLabels[0]} -> {imager.DetectionResults.PredictedScores[0]}");
+//            if (!imager.DetectionResults.IsEmpty)
+//                Console.WriteLine($"{imager.DetectionResults.PredictedLabels[0]} -> {imager.DetectionResults.PredictedScores[0]}");
             return imager;
         }
     }

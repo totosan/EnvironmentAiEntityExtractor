@@ -19,11 +19,30 @@ namespace EntityExtractor
         
         */
         private static ServiceProvider _svcProv;
+
+        protected static int origRow;
+        protected static int origCol;
+
+        protected static void WriteAt(string s, int x, int y)
+        {
+            try
+            {
+                Console.SetCursorPosition(origCol + x, origRow + y);
+                Console.Write(s);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                Console.Clear();
+                Console.WriteLine(e.Message);
+            }
+        }
+
         static async Task Main(string[] args)
         {
             _svcProv = Configure();
             var logger = _svcProv.GetService<ILogger<Program>>();
-
+            origRow = Console.CursorTop;
+            origCol = Console.CursorLeft;
             if (args.Length >= 2 && args.Length <= 3)
             {
                 bool subFolder = args.Length == 3 && args[2] == "-s";
@@ -34,10 +53,13 @@ namespace EntityExtractor
                     var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"), GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\labels.txt"));
                     var timer = new Stopwatch();
                     timer.Start();
+                    int cntr = 0;
                     Parallel.ForEach(allFiles, new ParallelOptions() { MaxDegreeOfParallelism = Convert.ToInt32(Environment.ProcessorCount * 0.5f) }, (file) =>
                               {
                                   // per Image
-
+                                  Console.Clear();
+                                  WriteAt($"{(cntr++).ToString()}/{allFiles.Count()}", 0, 0);
+                                  WriteAt($"{file}", 10, 0);
                                   var imgr = new Imager(file);
 
                                   detector.RunDetection(imgr);
@@ -60,7 +82,7 @@ namespace EntityExtractor
                                               }
                                               foreach (var im in obj.Value)
                                               {
-                                                  im.SaveAsJpeg(Path.Combine(folder, Path.GetFileName(imgr.PathOfFile)));
+                                                  im.SaveAsJpeg(Path.Combine(folder, Path.GetFileNameWithoutExtension(imgr.PathOfFile) + "_c." + Path.GetExtension(imgr.PathOfFile)));
                                               }
                                           }
                                       }

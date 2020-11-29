@@ -58,7 +58,7 @@ namespace EntityExtractor.Extensions
 
             var width = box[2] - box[0];
             var height = box[3] - box[1];
-            var rect = new RectangleF(box[0] * width, box[1] * tHeight, width * tWidth, height * tHeight);
+            var rect = new RectangleF(box[0] * tWidth, box[1] * tHeight, width * tWidth, height * tHeight);
             return rect;
         }
 

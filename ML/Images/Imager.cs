@@ -66,7 +66,7 @@ namespace EntityExtractor.Images
             foreach (var box in this.DetectionResults.PredictedBoxes)
             {
                 var convertedBox = (Rectangle)box.ConvertAndResizedToRectF(this.AsImage.Width, this.AsImage.Height);
-                if (convertedBox.Width == 0 || convertedBox.Height == 0)
+                if (convertedBox.Width <= 0 || convertedBox.Height <= 0)
                     break;
                 string label = this.DetectionResults.PredictedLabels[i].ToString();
                 if (!lib.ContainsKey(label))
