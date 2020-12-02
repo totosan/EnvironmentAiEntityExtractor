@@ -2,8 +2,8 @@
 *.zip
 
 # dotnet
-bin/*
-obj/*
+**/bin/*
+**/obj/*
 
 # python
 **/__pycache__
