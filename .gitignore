@@ -1,3 +1,10 @@
+# general
+*.zip
+**testoutput/*
+
+# dotnet
 **/bin/*
 **/obj/*
-**testoutput/*
+
+# python
+**/__pycache__

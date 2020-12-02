@@ -2,12 +2,22 @@
         "version": "2.0.0",
         "tasks": [
             {
-                "label": "build",
+                "label": "build-OnnxCrop",
                 "command": "dotnet",
                 "type": "process",
                 "args": [
                     "build",
                     "${workspaceFolder}/OnnxObjDet-cropped/EntityExtractor.csproj"
+                ],
+                "problemMatcher": "$msCompile"
+            },
+            {
+                "label": "build-YoloApiCall",
+                "command": "dotnet",
+                "type": "process",
+                "args": [
+                    "build",
+                    "${workspaceFolder}/YoloAPICall/EntityExtractor.csproj"
                 ],
                 "problemMatcher": "$msCompile"
             }
