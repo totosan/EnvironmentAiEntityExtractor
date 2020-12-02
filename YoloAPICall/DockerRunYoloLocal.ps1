@@ -1,0 +1,1 @@
+docker run -d --rm --name yolo_service -p 8080:8080 johannestang/yolo_service:1.0-yolov3_coco

@@ -7,7 +7,7 @@
                 "type": "process",
                 "args": [
                     "build",
-                    "${workspaceFolder}/EntityExtractor.csproj"
+                    "${workspaceFolder}/YoloAPICall/EntityExtractor.csproj"
                 ],
                 "problemMatcher": "$msCompile"
             }
