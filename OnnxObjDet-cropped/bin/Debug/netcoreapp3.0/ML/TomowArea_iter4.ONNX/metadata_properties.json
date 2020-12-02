@@ -1,0 +1,8 @@
+{
+    "CustomVision.Metadata.Version": "1.0",
+    "CustomVision.Postprocess.Method": "ssd",
+    "CustomVision.Preprocess.ResizeAndCropMethod": "StretchNoCrop",
+    "Image.BitmapPixelFormat": "Rgb8",
+    "Image.ColorSpaceGamma": "SRGB",
+    "Image.NominalPixelRange": "Normalized_0_1"
+}

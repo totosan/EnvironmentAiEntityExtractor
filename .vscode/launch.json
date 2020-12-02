@@ -5,15 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (console)",
+            "name": "OnnxRunCropping",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/netcoreapp3.0/EntityExtractor.dll",
+            "program": "${workspaceFolder}/OnnxObjDet-cropped/bin/Debug/netcoreapp3.0/EntityExtractor.dll",
             "args": ["C:\\Temp\\ImageProcessing_tomowArea","C:\\Temp\\pics","-s"],
             //"args": ["C:\\Temp\\ImageProcessing_tomowArea","C:\\Temp\\ImageProcessing_tomowArea_out"],
             //"args": ["C:\\Temp\\ImageProcessing_tomowArea","C:\\temp\\outs"],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/OnnxObjDet-cropped",
             "console": "integratedTerminal",
             "stopAtEntry": false
         },
