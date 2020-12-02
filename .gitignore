@@ -1,2 +1,9 @@
+# general
+*.zip
+
+# dotnet
 bin/*
 obj/*
+
+# python
+**/__pycache__
