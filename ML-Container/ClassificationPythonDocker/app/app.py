@@ -4,12 +4,6 @@ import os
 import io
 from datetime import datetime
 
-try:
-    import ptvsd
-    __myDebug__ = True
-    ptvsd.enable_attach(('0.0.0.0',  5679))
-except ImportError:
-    __myDebug__ = False
 
 # Imports for the REST API
 from flask import Flask, request, jsonify
@@ -55,9 +49,10 @@ def predict_image_handler(project=None, publishedName=None):
         with open(LABELS_FILENAME) as f:
             labels = [l.strip() for l in f.readlines()]
 
-        predictions = [{'probability': 0,
+        label = results[0][0][0]
+        predictions = [{'probability': results[1][0][label],
                   'tagId': 0,
-                  'tagName':results,
+                  'tagName':label,
                   'boundingBox': {
                     'left': 0,
                     'top': 0,
