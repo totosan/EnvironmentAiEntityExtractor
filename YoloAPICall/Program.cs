@@ -11,6 +11,7 @@ using Files;
 using PipelineImplementations.BlockingCollection;
 using System.IO;
 using EntityExtractor.ML.Model;
+using System.Linq;
 
 namespace Temp
 {
@@ -20,7 +21,8 @@ namespace Temp
             EntityExtractor.exe <input folder> <output folder>
         
         */
-        private const string Url = "http://localhost:3031/image";
+        private const string Url = "http://localhost:5000/predict-raw";
+        //private const string Url = "http://localhost:3031/image";
         private static ServiceProvider _svcProv;
         static async Task Main(string[] args)
         {
@@ -95,10 +97,11 @@ namespace Temp
             nvc.Add("threshold", "0.4");
             var resultString = ImageUpload.ImageUploader.UploadFilesToRemoteUrl(Url, new string[] { file }, nvc);
             resultString = resultString.Replace("\r", "").Replace("\n", "");
-            if (resultString != "[]")
+            if (resultString != "[]" && resultString != "{}")
             {
                 Console.Write($"{file} :");
-                return new DetectionOutputPoco() { Detections = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(resultString), File = file };
+                JObject detection = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(resultString);
+                return new DetectionOutputPoco() { Detections = detection, File = file };
             }
             return null;
         }
@@ -116,15 +119,21 @@ namespace Temp
             if (detectorResult != null && detectorResult["predictions"].HasValues)
             {
                 var libraryLocal = new Dictionary<string, List<(int[], string)>>();
+                List<string>[] keys = new List<string>[2];
                 for (var i = 0; i < ((JArray)detectorResult["predictions"]).Count; i++)
                 {
                     var prediction = detectorResult["predictions"][i];
-                    if (prediction["probability"].ToObject<float>() < 0.30)
+                    if (prediction["score"].ToObject<float>() < 0.30)
                         continue;
-                    if (!libraryLocal.ContainsKey(prediction["tagName"].ToString()))
-                        libraryLocal[prediction["tagName"].ToString()] = new List<(int[], string)>();
-                    libraryLocal[prediction["tagName"].ToString()].Add((prediction["boundingBox"].ToObject<MyBoundingBox>().ConvertToIntArray(), file));
-                    Console.Write($" {prediction["tagName"]} ({prediction["probability"]})");
+                    if (!libraryLocal.ContainsKey(prediction["class"].ToString()))
+                        libraryLocal[prediction["class"].ToString()] = new List<(int[], string)>();
+                    MyBoundingBox box = new MyBoundingBox((float)prediction["top"],
+                        (float)prediction["left"],
+                        (float)prediction["bottom"]-(float)prediction["top"],
+                        (float)prediction["right"]-(float)prediction["left"]
+                    );
+                    libraryLocal[prediction["class"].ToString()].Add((box.ConvertToIntArray(), file));
+                    Console.Write($" {prediction["class"]} ({prediction["score"]})");
                 }
                 return new WriteFileOutputPoco() { Library = libraryLocal, File = file };
             }
@@ -145,9 +154,9 @@ namespace Temp
         {
             var builder = new CastingPipelineWithAwait<Dictionary<string, List<(int[], string)>>>();
             var parallel = 2;
-            builder.AddStep(input => input as string, parallel, 10);
-            builder.AddStep(input => GetDetectionsStep(input as string), parallel, 10);
-            builder.AddStep(input => GetLabelsStep((input as DetectionOutputPoco)), parallel, 10);
+            builder.AddStep(input => input as string, parallel, 1);
+            builder.AddStep(input => GetDetectionsStep(input as string), parallel, 1);
+            builder.AddStep(input => GetLabelsStep((input as DetectionOutputPoco)), parallel, 1);
             builder.AddStep(input => WriteFileOutputStep(filePutter, input as WriteFileOutputPoco), parallel, 10);
             var pipeline = builder.GetPipeline();
             return pipeline;

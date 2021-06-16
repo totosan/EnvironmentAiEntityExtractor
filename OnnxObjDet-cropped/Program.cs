@@ -39,6 +39,11 @@ namespace EntityExtractor
 
         static async Task Main(string[] args)
         {
+            // args:  source-folder dest-folder [-s]
+            //        -source-folder : path of images, that should be screened
+            //        -dest-folder : folder, where to collect detected peaces
+            //        -s : if set, for each found class a subfolder will be created
+
             _svcProv = Configure();
             var logger = _svcProv.GetService<ILogger<Program>>();
             origRow = Console.CursorTop;
