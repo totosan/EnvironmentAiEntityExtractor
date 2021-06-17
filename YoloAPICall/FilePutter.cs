@@ -10,6 +10,7 @@ namespace Files
     public class FilePutter
     {
         readonly ILogger _log;
+        private readonly bool WithSubFolder;
         private string _path;
 
         public bool IsError { get; set; }
@@ -33,10 +34,11 @@ namespace Files
             }
         }
 
-        public FilePutter(string path, ILogger log)
+        public FilePutter(string path, bool subFolder, ILogger log)
         {
             Path = path;
             _log = log;
+            WithSubFolder = subFolder;
         }
 
         public void SaveCroppedImageToSeperateFolders(string filename, int counter, string className, float confidence, int[] rect)
@@ -55,12 +57,32 @@ namespace Files
             _log.LogInformation($", {filename}, {className}, {confidence}");
         }
 
-        public void WriteMetaData(string filename, Dictionary<string, List<(int[], string)>> value)
+        public void SaveImageToSeperateFolders(string filename, Dictionary<string, List<(int[], string)>> value)
+        {
+            var imgr = new Images.Imager(filename);
+
+            //var labels = string.Join(',', value.Select(x => x.Key));
+            var labels = value.Select(x=>x.Key).ToList();
+            foreach (var className in labels)
+            {
+                var newPath = System.IO.Path.Combine(Path, className);
+                if (!Directory.Exists(newPath))
+                {
+                    Directory.CreateDirectory(newPath);
+                }
+
+                var filepath = System.IO.Path.Combine(newPath, $"{System.IO.Path.GetFileNameWithoutExtension(filename)}_{className}_{System.IO.Path.GetExtension(filename)}");
+                imgr.Image.Save(filepath);
+                _log.LogInformation($", {filename}, {className}");
+            }
+        }
+
+        public void SaveFileWithMetaData(string filename, Dictionary<string, List<(int[], string)>> value)
         {
             var imgr = new Images.Imager(filename);
             var commentField = MetaProperty.ImageDescription;
 
-            var lables = string.Join(',',value.Select(x=>x.Key)); 
+            var lables = string.Join(',', value.Select(x => x.Key));
             imgr.Image.SetMetaValue(commentField, lables);
 
             var filepath = System.IO.Path.Combine(Path, System.IO.Path.GetFileName(filename));

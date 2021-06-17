@@ -21,17 +21,24 @@ namespace Temp
             EntityExtractor.exe <input folder> <output folder>
         
         */
-        private const string Url = "http://localhost:5000/predict-raw";
+        private const string Url = "http://localhost/predict-raw";
         //private const string Url = "http://localhost:3031/image";
         private static ServiceProvider _svcProv;
+        private static bool WithSubFolder = false;
+        private static float CONFIDENCE = 0.3f;
+
         static async Task Main(string[] args)
         {
             _svcProv = Configure();
             var logger = _svcProv.GetService<ILogger<Program>>();
 
-            if (args.Length == 2)
+            if (args.Length >= 2)
             {
-                await RunAsync(args[0], args[1], logger);
+                string sourceFolder = args[0];
+                string targetFolder = args[1];
+                WithSubFolder = args.Length == 3 && ((string)args[2]) == "-s";
+
+                await RunAsync(sourceFolder, targetFolder, logger);
 
                 while (Console.ReadKey(true).Key != ConsoleKey.Escape)
                 {
@@ -40,7 +47,10 @@ namespace Temp
             }
             else
             {
-                Console.WriteLine("Usage: EntityExtractor.exe <folder with pics> <folder for output>");
+                Console.WriteLine("Usage: EntityExtractor.exe <folder with pics> <folder for output> [-s]");
+                Console.WriteLine("         <folder with pics>: source folder containing all images, for scanning");
+                Console.WriteLine("         <folder for output>: target folder, to sort the images into there identified classes (Tags/ Labels)");
+                Console.WriteLine("         -s : optional - arranges images in target folder into sub folder, that are named like the identified class ob object");
             }
         }
 
@@ -59,7 +69,7 @@ namespace Temp
         {
             await Task.Run(() =>
             {
-                FilePutter filePutter = new FilePutter(output, logger);
+                FilePutter filePutter = new FilePutter(output, WithSubFolder, logger);
 
                 var grabber = new Files.FileGrabber(path);
                 if (grabber.IsError)
@@ -123,14 +133,16 @@ namespace Temp
                 for (var i = 0; i < ((JArray)detectorResult["predictions"]).Count; i++)
                 {
                     var prediction = detectorResult["predictions"][i];
-                    if (prediction["score"].ToObject<float>() < 0.30)
+                    if (prediction["score"].ToObject<float>() < CONFIDENCE)
                         continue;
                     if (!libraryLocal.ContainsKey(prediction["class"].ToString()))
+                    {
                         libraryLocal[prediction["class"].ToString()] = new List<(int[], string)>();
+                    }
                     MyBoundingBox box = new MyBoundingBox((float)prediction["top"],
                         (float)prediction["left"],
-                        (float)prediction["bottom"]-(float)prediction["top"],
-                        (float)prediction["right"]-(float)prediction["left"]
+                        (float)prediction["bottom"] - (float)prediction["top"],
+                        (float)prediction["right"] - (float)prediction["left"]
                     );
                     libraryLocal[prediction["class"].ToString()].Add((box.ConvertToIntArray(), file));
                     Console.Write($" {prediction["class"]} ({prediction["score"]})");
@@ -142,11 +154,14 @@ namespace Temp
 
         private static Dictionary<string, List<(int[], string)>> WriteFileOutputStep(FilePutter filePutter, WriteFileOutputPoco outputPoco)
         {
-            if (outputPoco == null || outputPoco.Library.Count==0)
+            if (outputPoco == null || outputPoco.Library.Count == 0)
             {
                 return null;
             }
-            filePutter.WriteMetaData(outputPoco.File, outputPoco.Library);
+            if(WithSubFolder)
+                filePutter.SaveImageToSeperateFolders(outputPoco.File, outputPoco.Library);
+            else
+                filePutter.SaveFileWithMetaData(outputPoco.File, outputPoco.Library);
             return outputPoco.Library;
         }
 
