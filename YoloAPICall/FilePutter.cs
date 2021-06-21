@@ -4,6 +4,7 @@ using Images;
 using System.Drawing;
 using System.Collections.Generic;
 using System.Linq;
+using EntityExtractor;
 
 namespace Files
 {
@@ -57,27 +58,30 @@ namespace Files
             _log.LogInformation($", {filename}, {className}, {confidence}");
         }
 
-        public void SaveImageToSeperateFolders(string filename, Dictionary<string, List<(int[], string)>> value)
+        public void SaveImageToSeperateFolders(string filename, Dictionary<string, List<DetectionItem>> value)
         {
             var imgr = new Images.Imager(filename);
 
-            //var labels = string.Join(',', value.Select(x => x.Key));
-            var labels = value.Select(x=>x.Key).ToList();
-            foreach (var className in labels)
+            foreach (var item in value)
             {
-                var newPath = System.IO.Path.Combine(Path, className);
-                if (!Directory.Exists(newPath))
+                var className = item.Key;
+                foreach (var detection in item.Value)
                 {
-                    Directory.CreateDirectory(newPath);
-                }
+                    var newPath = System.IO.Path.Combine(Path, className);
+                    if (!Directory.Exists(newPath))
+                    {
+                        Directory.CreateDirectory(newPath);
+                    }
 
-                var filepath = System.IO.Path.Combine(newPath, $"{System.IO.Path.GetFileNameWithoutExtension(filename)}_{className}_{System.IO.Path.GetExtension(filename)}");
-                imgr.Image.Save(filepath);
-                _log.LogInformation($", {filename}, {className}");
+                    var filepath = System.IO.Path.Combine(newPath, $"{System.IO.Path.GetFileNameWithoutExtension(filename)}_{detection.Scoring.ToString("P0")}_{System.IO.Path.GetExtension(filename)}");
+                    imgr.Image.Save(filepath);
+                    _log.LogInformation($", {System.IO.Path.GetFileName(filename)}, {className}, {detection.Scoring.ToString("P0")}");
+                }
             }
+
         }
 
-        public void SaveFileWithMetaData(string filename, Dictionary<string, List<(int[], string)>> value)
+        public void SaveFileWithMetaData(string filename, Dictionary<string, List<DetectionItem>> value)
         {
             var imgr = new Images.Imager(filename);
             var commentField = MetaProperty.ImageDescription;

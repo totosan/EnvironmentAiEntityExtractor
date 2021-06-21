@@ -12,6 +12,7 @@ using PipelineImplementations.BlockingCollection;
 using System.IO;
 using EntityExtractor.ML.Model;
 using System.Linq;
+using EntityExtractor;
 
 namespace Temp
 {
@@ -21,7 +22,7 @@ namespace Temp
             EntityExtractor.exe <input folder> <output folder>
         
         */
-        private const string Url = "http://localhost/predict-raw";
+        private const string Url = "http://localhost:5000/predict-raw";
         //private const string Url = "http://localhost:3031/image";
         private static ServiceProvider _svcProv;
         private static bool WithSubFolder = false;
@@ -79,10 +80,8 @@ namespace Temp
 
                 var grabbedFiles = grabber.GetFiles();
 
-                var library = new Dictionary<string, List<(int[], string)>>();
                 var pipeline = GetObjectDetectionPipeline(filePutter);
 
-                int cnt = 0;
                 var tsk = System.Threading.Tasks.Task.Run(async () =>
                {
 
@@ -105,13 +104,20 @@ namespace Temp
             }
             NameValueCollection nvc = new NameValueCollection();
             nvc.Add("threshold", "0.4");
-            var resultString = ImageUpload.ImageUploader.UploadFilesToRemoteUrl(Url, new string[] { file }, nvc);
-            resultString = resultString.Replace("\r", "").Replace("\n", "");
-            if (resultString != "[]" && resultString != "{}")
+            try
             {
-                Console.Write($"{file} :");
-                JObject detection = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(resultString);
-                return new DetectionOutputPoco() { Detections = detection, File = file };
+                var resultString = ImageUpload.ImageUploader.UploadFilesToRemoteUrl(Url, new string[] { file }, nvc);
+                resultString = resultString.Replace("\r", "").Replace("\n", "");
+                if (resultString != "[]" && resultString != "{}")
+                {
+                    Console.Write($"{file} :");
+                    JObject detection = Newtonsoft.Json.JsonConvert.DeserializeObject<JObject>(resultString);
+                    return new DetectionOutputPoco() { Detections = detection, File = file };
+                }
+            }
+            catch (Exception e)
+            {
+                throw e;
             }
             return null;
         }
@@ -128,47 +134,49 @@ namespace Temp
 
             if (detectorResult != null && detectorResult["predictions"].HasValues)
             {
-                var libraryLocal = new Dictionary<string, List<(int[], string)>>();
+                var libraryLocal = new Dictionary<string, List<DetectionItem>>();
                 List<string>[] keys = new List<string>[2];
                 for (var i = 0; i < ((JArray)detectorResult["predictions"]).Count; i++)
                 {
                     var prediction = detectorResult["predictions"][i];
-                    if (prediction["score"].ToObject<float>() < CONFIDENCE)
+                    var score = prediction["score"].ToObject<float>();
+                    if (score < CONFIDENCE)
                         continue;
-                    if (!libraryLocal.ContainsKey(prediction["class"].ToString()))
+                    var className = prediction["class"].ToString();
+                    if (!libraryLocal.ContainsKey(className))
                     {
-                        libraryLocal[prediction["class"].ToString()] = new List<(int[], string)>();
+                        libraryLocal[className] = new List<DetectionItem>();
                     }
                     MyBoundingBox box = new MyBoundingBox((float)prediction["top"],
                         (float)prediction["left"],
                         (float)prediction["bottom"] - (float)prediction["top"],
                         (float)prediction["right"] - (float)prediction["left"]
                     );
-                    libraryLocal[prediction["class"].ToString()].Add((box.ConvertToIntArray(), file));
-                    Console.Write($" {prediction["class"]} ({prediction["score"]})");
+                    libraryLocal[prediction["class"].ToString()].Add(new DetectionItem { BoundingBoxes = box, FileName = file, Scoring = score });
+                    Console.Write($"\r\n {className} ({score.ToString("P0")})");
                 }
                 return new WriteFileOutputPoco() { Library = libraryLocal, File = file };
             }
             return null;
         }
 
-        private static Dictionary<string, List<(int[], string)>> WriteFileOutputStep(FilePutter filePutter, WriteFileOutputPoco outputPoco)
+        private static Dictionary<string, List<DetectionItem>> WriteFileOutputStep(FilePutter filePutter, WriteFileOutputPoco outputPoco)
         {
             if (outputPoco == null || outputPoco.Library.Count == 0)
             {
                 return null;
             }
-            if(WithSubFolder)
+            if (WithSubFolder)
                 filePutter.SaveImageToSeperateFolders(outputPoco.File, outputPoco.Library);
             else
                 filePutter.SaveFileWithMetaData(outputPoco.File, outputPoco.Library);
             return outputPoco.Library;
         }
 
-        private static IAwaitablePipeline<Dictionary<string, List<(int[], string)>>> GetObjectDetectionPipeline(FilePutter filePutter)
+        private static IAwaitablePipeline<Dictionary<string, List<DetectionItem>>> GetObjectDetectionPipeline(FilePutter filePutter)
         {
-            var builder = new CastingPipelineWithAwait<Dictionary<string, List<(int[], string)>>>();
-            var parallel = 2;
+            var builder = new CastingPipelineWithAwait<Dictionary<string, List<DetectionItem>>>();
+            var parallel = 1;
             builder.AddStep(input => input as string, parallel, 1);
             builder.AddStep(input => GetDetectionsStep(input as string), parallel, 1);
             builder.AddStep(input => GetLabelsStep((input as DetectionOutputPoco)), parallel, 1);

@@ -56,7 +56,7 @@ namespace EntityExtractor.Images
             this.AsImage.SetMetaValue(string.Join(',', this.DetectionResults.PredictedLabels));
         }
 
-        public Dictionary<string, List<Image<Rgb24>>> GetDetectionsAsImages()
+        public Dictionary<string, List<Image<Rgb24>>> GetDetectionsAsImages(bool cropped = false)
         {
             if (this.DetectionResults.PredictedBoxes == null || this.DetectionResults.PredictedBoxes.Length == 0)
                 return null;
@@ -65,7 +65,8 @@ namespace EntityExtractor.Images
 
             foreach (var box in this.DetectionResults.PredictedBoxes)
             {
-                var convertedBox = (Rectangle)box.ConvertAndResizedToRectF(this.AsImage.Width, this.AsImage.Height);
+                //var convertedBox = new Rectangle(){X=(int)box[0], Y=(int)box[1],Width=(int)box[2],Height=(int)box[3]};
+                var convertedBox = ((Rectangle)box.ConvertToRectF());
                 if (convertedBox.Width <= 0 || convertedBox.Height <= 0)
                     break;
                 string label = this.DetectionResults.PredictedLabels[i].ToString();
@@ -74,11 +75,12 @@ namespace EntityExtractor.Images
                     lib.Add(label, new List<Image<Rgb24>>());
                 }
 
-                lib[label].Add(CloneCropped(convertedBox));
+                lib[label].Add(cropped ? CloneCropped(convertedBox) : this.AsOriginalImage.Clone());
                 i++;
             }
             return lib;
         }
+
         public void Save(string path)
         {
             this.AsImage.SaveAsJpeg(path);
@@ -90,7 +92,7 @@ namespace EntityExtractor.Images
                                             x.Resize(new ResizeOptions
                                             {
                                                 Size = new Size(ML.Data.ImageNetSettings.imageWidth, ML.Data.ImageNetSettings.imageHeight),
-                                                Mode = ResizeMode.Crop
+                                                Mode = ResizeMode.BoxPad
                                             });
                                         });
         }

@@ -12,14 +12,14 @@ using EntityExtractor.ML.Helper;
 using SixLabors.ImageSharp.PixelFormats;
 using EntityExtractor;
 using EntityExtractor.ML.Interfaces;
-
+using OnnxObjectDetection;
 namespace EntityExtractor.ML
 {
-    public class OnnxModelScorer: IModelScorer
+    public class OnnxModelScorer : IModelScorer
     {
-        private string imagesFolder;
 
         public string[] Lables { get; }
+        public float Confidence { get; set; }
 
         private InferenceSession session;
 
@@ -27,24 +27,25 @@ namespace EntityExtractor.ML
         {
             this.Lables = File.ReadLines(labelPath).ToArray();
             this.session = new InferenceSession(modelPath);
+
         }
 
         private ImageNetPrediction PredictDataUsingModel(Imager imgr)
         {
-/*            Console.WriteLine($"Images location: {imgr.PathOfFile}");
-            Console.WriteLine("");
-            Console.WriteLine("=====Identify the objects in the images=====");
-            Console.WriteLine("");
-*/
+            //imgr.Resize(SixLabors.ImageSharp.Processing.ResizeMode.BoxPad);
             imgr.CropSquared();
             //imgr.Resize(SixLabors.ImageSharp.Processing.ResizeMode.Stretch);
             var inputs = imgr.AsImage.GetInputsFromImage();
             using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs);
 
+            OnnxOutputParser outputParser = new OnnxOutputParser(new CustomVisionModel("ML\\TomowArea_iter4.ONNX\\"));
+            var values = results.GetAsFloatArray();
+            var bboxes= outputParser.ParseOutputs(values, 0.3f);
+
             ImageNetPrediction resultDict = new ImageNetPrediction();
-            resultDict.PredictedLabels = results.GetLabelResult(this.Lables);
-            resultDict.PredictedBoxes = results.GetBoxesResult();
-            resultDict.PredictedScores = results.GetScoreResult();
+            resultDict.PredictedBoxes = bboxes.GetBoxesResult();
+            resultDict.PredictedLabels = bboxes.GetLabelResult();
+            resultDict.PredictedScores = bboxes.GetScoreResult();
             return resultDict;
         }
 
@@ -52,8 +53,8 @@ namespace EntityExtractor.ML
         {
             var prediction = PredictDataUsingModel(imager);
             imager.DetectionResults = prediction.GetBestResults(5, 0.2f);
-//            if (!imager.DetectionResults.IsEmpty)
-//                Console.WriteLine($"{imager.DetectionResults.PredictedLabels[0]} -> {imager.DetectionResults.PredictedScores[0]}");
+            //            if (!imager.DetectionResults.IsEmpty)
+            //                Console.WriteLine($"{imager.DetectionResults.PredictedLabels[0]} -> {imager.DetectionResults.PredictedScores[0]}");
             return imager;
         }
     }

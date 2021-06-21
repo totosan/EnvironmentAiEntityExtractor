@@ -54,12 +54,13 @@ namespace EntityExtractor
 
                 await Task.Run(() =>
                 {
-                    var allFiles = Directory.GetFiles(args[0]);
+                    var allFiles = Directory.GetFiles(args[0],"*.*", SearchOption.AllDirectories);
                     var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"), GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\labels.txt"));
+                    detector.Confidence = 0.2f;
                     var timer = new Stopwatch();
                     timer.Start();
                     int cntr = 0;
-                    Parallel.ForEach(allFiles, new ParallelOptions() { MaxDegreeOfParallelism = Convert.ToInt32(Environment.ProcessorCount * 0.5f) }, (file) =>
+                    Parallel.ForEach(allFiles, new ParallelOptions() { MaxDegreeOfParallelism = Convert.ToInt32(Environment.ProcessorCount * 0.5f) }, (file,state) =>
                               {
                                   // per Image
                                   Console.Clear();
@@ -71,7 +72,7 @@ namespace EntityExtractor
 
                                   if (!imgr.DetectionResults.IsEmpty)
                                   {
-                                      var objects = imgr.GetDetectionsAsImages();
+                                      var objects = imgr.GetDetectionsAsImages(cropped:false);
 
                                       var rootfolder = GetAbsolutePath(args[1]);
                                       if (subFolder) //sort into seperate folder
@@ -87,7 +88,7 @@ namespace EntityExtractor
                                               }
                                               foreach (var im in obj.Value)
                                               {
-                                                  im.SaveAsJpeg(Path.Combine(folder, Path.GetFileNameWithoutExtension(imgr.PathOfFile) + "_c." + Path.GetExtension(imgr.PathOfFile)));
+                                                  im.SaveAsJpeg(Path.Combine(folder, Path.GetFileNameWithoutExtension(imgr.PathOfFile) + $"_{detector.Confidence.ToString("P0")}." + Path.GetExtension(imgr.PathOfFile)));
                                               }
                                           }
                                       }
@@ -96,6 +97,8 @@ namespace EntityExtractor
                                           imgr.Save(Path.Combine(rootfolder, Path.GetFileName(imgr.PathOfFile)));
                                       }
                                   }
+                                  if (cntr>=10000)
+                                    state.Break();
                               });
                     timer.Stop();
                     Console.WriteLine($"Completed run in {timer.ElapsedMilliseconds / 1000f}s with {allFiles.Count()} files");

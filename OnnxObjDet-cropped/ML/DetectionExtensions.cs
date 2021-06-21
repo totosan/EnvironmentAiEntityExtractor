@@ -7,7 +7,7 @@ using EntityExtractor.ML.Data;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using EntityExtractor.Extensions;
-
+using OnnxObjectDetection;
 namespace EntityExtractor.ML
 {
     public static class DetectionExtensions
@@ -30,20 +30,22 @@ namespace EntityExtractor.ML
             return inputs;
         }
 
-        public static string[] GetLabelResult(this IDisposableReadOnlyCollection<DisposableNamedOnnxValue> values, string[] labels)
+        public static float[] GetAsFloatArray(this IDisposableReadOnlyCollection<DisposableNamedOnnxValue> values)
         {
-            var labelNumbers = values.First(x => x.Name == "detected_classes").AsTensor<Int64>();
-            return labelNumbers.Select(l=>labels[l]).ToArray();
+            var floatValues = values.First(x => x.Name == "model_outputs0").AsEnumerable<float>();
+            return floatValues.ToArray();
         }
-        public static float[][] GetBoxesResult(this IDisposableReadOnlyCollection<DisposableNamedOnnxValue> values)
+        public static string[] GetLabelResult(this List<BoundingBox> values)
         {
-            var boxes = values.First(x => x.Name == "detected_boxes").AsTensor<Single>().ToArray();
-            var convertedBoxes = boxes.Split(4).Select(x => x.ToArray()).ToArray();
-            return convertedBoxes;
+            return values.Select(l=>l.Label).ToArray();
         }
-        public static float[] GetScoreResult(this IDisposableReadOnlyCollection<DisposableNamedOnnxValue> values)
+        public static float[][] GetBoxesResult(this List<BoundingBox> values)
         {
-            return values.First(x => x.Name == "detected_scores").AsTensor<float>().ToArray();
+            return values.Select(b=>new float[]{b.Rect.X,b.Rect.Y,b.Rect.Right,b.Rect.Bottom}).ToArray();
+        }
+        public static float[] GetScoreResult(this List<BoundingBox> values)
+        {
+            return values.Select(x => x.Confidence).ToArray();
         }
     }
 }

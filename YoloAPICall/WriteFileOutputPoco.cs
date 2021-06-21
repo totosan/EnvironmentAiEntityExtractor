@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using EntityExtractor;
 
 namespace Temp
 {
@@ -7,7 +8,7 @@ namespace Temp
         class WriteFileOutputPoco
         {
             public string File { get; set; }
-            public Dictionary<string, List<(int[], string)>> Library { get; set; }
+            public Dictionary<string, List<DetectionItem>> Library { get; set; }
         }
     }
 }
