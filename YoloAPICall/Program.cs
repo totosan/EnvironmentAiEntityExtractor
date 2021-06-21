@@ -21,7 +21,7 @@ namespace Temp
             EntityExtractor.exe <input folder> <output folder>
         
         */
-        private const string Url = "http://localhost/predict-raw";
+        private const string Url = "http://localhost:5000/predict-raw";
         //private const string Url = "http://localhost:3031/image";
         private static ServiceProvider _svcProv;
         private static bool WithSubFolder = false;
