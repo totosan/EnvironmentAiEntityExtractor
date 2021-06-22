@@ -88,7 +88,7 @@ namespace EntityExtractor
                                               }
                                               foreach (var im in obj.Value)
                                               {
-                                                  im.SaveAsJpeg(Path.Combine(folder, Path.GetFileNameWithoutExtension(imgr.PathOfFile) + $"_{detector.Confidence.ToString("P0")}." + Path.GetExtension(imgr.PathOfFile)));
+                                                  im.SaveAsJpeg(Path.Combine(folder, Path.GetFileNameWithoutExtension(imgr.PathOfFile) + Path.GetExtension(imgr.PathOfFile)));
                                               }
                                           }
                                       }
