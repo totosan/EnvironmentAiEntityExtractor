@@ -7,7 +7,7 @@
                 "type": "process",
                 "args": [
                     "build",
-                    "${workspaceFolder}/OnnxObjDet-cropped/EntityExtractor.csproj"
+                    "${workspaceFolder}/OnnxRuntimeObjDet/EntityExtractor.csproj"
                 ],
                 "problemMatcher": "$msCompile"
             },

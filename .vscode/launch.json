@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "OnnxRunCropping",
+            "name": "OnnxRunObjectDetection",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-OnnxCrop",
-            "program": "${workspaceFolder}/OnnxObjDet-cropped/bin/Debug/netcoreapp5.0/EntityExtractor.dll",
+            "program": "${workspaceFolder}/OnnxRuntimeObjDet/bin/Debug/netcoreapp5.0/EntityExtractor.dll",
             "args": [
                 "G:\\SpyCam\\video\\Lupus\\grabs",
                 "G:\\Temp\\grabs_out",
@@ -18,7 +18,7 @@
             ],
             //"args": ["C:\\Temp\\ImageProcessing_tomowArea","C:\\Temp\\ImageProcessing_tomowArea_out"],
             //"args": ["C:\\Temp\\ImageProcessing_tomowArea","C:\\temp\\outs"],
-            "cwd": "${workspaceFolder}/OnnxObjDet-cropped",
+            "cwd": "${workspaceFolder}/OnnxRuntimeObjDet",
             "console": "integratedTerminal",
             "stopAtEntry": false
         },
