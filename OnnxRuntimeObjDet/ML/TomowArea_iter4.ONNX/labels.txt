@@ -1,2 +1,5 @@
+Hund
 Person
+Post
 Tonne
+Vogel

@@ -73,9 +73,9 @@ namespace Files
                         Directory.CreateDirectory(newPath);
                     }
 
-                    var filepath = System.IO.Path.Combine(newPath, $"{System.IO.Path.GetFileNameWithoutExtension(filename)}_{detection.Scoring.ToString("P0")}_{System.IO.Path.GetExtension(filename)}");
+                    var filepath = System.IO.Path.Combine(newPath, $"{System.IO.Path.GetFileNameWithoutExtension(filename)}_{(detection.Scoring*100f).ToString("F0")}_{System.IO.Path.GetExtension(filename)}");
                     imgr.Image.Save(filepath);
-                    _log.LogInformation($", {System.IO.Path.GetFileName(filename)}, {className}, {detection.Scoring.ToString("P0")}");
+                    _log.LogInformation($", {System.IO.Path.GetFileName(filename)}, {className}, {(detection.Scoring*100f).ToString("F0")}");
                 }
             }
 

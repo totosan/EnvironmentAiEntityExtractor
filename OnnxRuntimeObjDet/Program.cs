@@ -54,7 +54,7 @@ namespace EntityExtractor
 
                 await Task.Run(() =>
                 {
-                    var allFiles = Directory.GetFiles(args[0], "*.*", SearchOption.AllDirectories);
+                    var allFiles = Directory.GetFiles(args[0], "*2021-05-15*.jpg", SearchOption.AllDirectories).OrderByDescending(f=>f);
                     var detector = new ML.OnnxModelScorer(GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\model.onnx"), GetAbsolutePath("ML\\TomowArea_iter4.ONNX\\labels.txt"));
                     detector.Confidence = 0.2f;
                     var timer = new Stopwatch();
@@ -98,7 +98,7 @@ namespace EntityExtractor
                                           imgr.Save(Path.Combine(rootfolder, Path.GetFileName(imgr.PathOfFile)));
                                       }
                                   }
-                                  if (cntr >= 10000)
+                                  if (cntr >= 20000)
                                       state.Break();
                               });
                     timer.Stop();

@@ -17,11 +17,19 @@ Interested in contributing this project? Take a look [here in Github (IoTEdgeObj
 ## Solution ##
 There are two folder for arranging images. These applicate two steps:   
 - **YoloAPICall**:  
-scannes all images via TinyYoloV3 for general objects and sort detected results into different folder.
+scannes all images via TinyYoloV3 for general objects and sort detected results into different folder.   
+*See DockerHub: [https://hub.docker.com/r/totosan/yolov3-tiny](totosan/yolov3-tiny)*  
+Run it before starting application via 
+```
+docker run -it --rm -p 5000:8080 totosan/yolov3-tiny:latest
+```
 - **OnnxObjDet-cropped**:  
-scannes all images in ``<sourcefolder>`` for objects pre-trained at Custom Vision API with the result images of first step.
-
+(classification)   
+scannes all images in ``<sourcefolder>`` for objects trained at Custom Vision API with the result images of first step.
 Those results are cropped images - the object itself. So, with this approach I can build in a third step a classifier model.
+- **OnnxRuntimeObjectDetection**:   
+(object detection)   
+same as the above, but same result as **YoloAPICall**; whole image sorted (optionally into subfolder)
 
 At the end I have two models. One, that can do specialised object detection (knowing my sourroundings), and second, using a hirarchical tree analysis of an object detected by a general model with Yolo and specialized analysis with a classification of the object.
 

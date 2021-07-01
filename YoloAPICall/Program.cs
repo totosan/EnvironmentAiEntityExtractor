@@ -13,6 +13,7 @@ using System.IO;
 using EntityExtractor.ML.Model;
 using System.Linq;
 using EntityExtractor;
+using System.Diagnostics;
 
 namespace Temp
 {
@@ -20,7 +21,9 @@ namespace Temp
     {
         /*
             EntityExtractor.exe <input folder> <output folder>
-        
+
+            https://hub.docker.com/r/totosan/yolov3-tiny
+            e.g.: docker run -it --rm -p 5000:8080 totosan/yolov3-tiny:latest
         */
         private const string Url = "http://localhost:5000/predict-raw";
         //private const string Url = "http://localhost:3031/image";
@@ -70,6 +73,8 @@ namespace Temp
         {
             await Task.Run(() =>
             {
+                Stopwatch watch = new Stopwatch();
+                watch.Start();
                 FilePutter filePutter = new FilePutter(output, WithSubFolder, logger);
 
                 var grabber = new Files.FileGrabber(path);
@@ -78,7 +83,7 @@ namespace Temp
                     Console.WriteLine($"'{path}' is no folder or does not exists!");
                 }
 
-                var grabbedFiles = grabber.GetFiles();
+                var grabbedFiles = grabber.GetFiles(new DateTime(2021,05,01),FileGrabber.DateTimeScope.Month);
 
                 var pipeline = GetObjectDetectionPipeline(filePutter);
 
@@ -93,7 +98,8 @@ namespace Temp
                });
                 tsk.Wait();
 
-                Console.WriteLine("Finished Pipeline");
+                watch.Stop();
+                Console.WriteLine("Finished Pipeline in "+ watch.Elapsed.ToString());
             });
         }
         private static DetectionOutputPoco GetDetectionsStep(string file)
@@ -176,10 +182,10 @@ namespace Temp
         private static IAwaitablePipeline<Dictionary<string, List<DetectionItem>>> GetObjectDetectionPipeline(FilePutter filePutter)
         {
             var builder = new CastingPipelineWithAwait<Dictionary<string, List<DetectionItem>>>();
-            var parallel = 1;
-            builder.AddStep(input => input as string, parallel, 1);
-            builder.AddStep(input => GetDetectionsStep(input as string), parallel, 1);
-            builder.AddStep(input => GetLabelsStep((input as DetectionOutputPoco)), parallel, 1);
+            var parallel = 2;
+            builder.AddStep(input => input as string, parallel, 2);
+            builder.AddStep(input => GetDetectionsStep(input as string), parallel, 2);
+            builder.AddStep(input => GetLabelsStep((input as DetectionOutputPoco)), parallel, 2);
             builder.AddStep(input => WriteFileOutputStep(filePutter, input as WriteFileOutputPoco), parallel, 10);
             var pipeline = builder.GetPipeline();
             return pipeline;

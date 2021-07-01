@@ -76,9 +76,11 @@ namespace EntityExtractor.Images
                     lib.Add(label, new List<Image<Rgb24>>());
                 }
 
-                this.AsOriginalImage.SetMetaValue(Math.Round(this.DetectionResults.PredictedScores[i]*100.0f).ToString());
-                lib[label].Add(cropped ? DrawRect(convertedBox, this.DetectionResults.PredictedScores[i]) : this.AsOriginalImage.Clone());
-                lib[label].Add(cropped ? CloneCropped(convertedBox) : this.AsOriginalImage.Clone());
+                var outputImage = this.AsOriginalImage;
+                
+                outputImage.SetMetaValue(Math.Round(this.DetectionResults.PredictedScores[i] * 100.0f).ToString());
+                //lib[label].Add(DrawRect(convertedBox, this.DetectionResults.PredictedScores[i],outputImage).Clone());
+                lib[label].Add(cropped ? CloneCropped(convertedBox) : outputImage.Clone());
                 i++;
             }
             return lib;
@@ -117,14 +119,14 @@ namespace EntityExtractor.Images
             return this.AsImage.Clone(x => x.Crop((Rectangle)rect));
         }
 
-        public Image<Rgb24> DrawRect(RectangleF rect, float confidence)
+        public Image<Rgb24> DrawRect(RectangleF rect, float confidence, Image<Rgb24> img)
         {
-            this.AsImage.Mutate(x =>
+            img.Mutate(x =>
                                         {
                                             x.Draw(Color.AliceBlue, 1.0f, rect);
-                                            x.DrawText($"{confidence.ToString("P0")}", SystemFonts.Find("Arial").CreateFont(9.0f, FontStyle.Regular), Color.AliceBlue, new PointF(rect.X+5.0f, rect.Y+5.0f));
+                                            x.DrawText($"{confidence.ToString("P0")}", SystemFonts.Find("Arial").CreateFont(9.0f, FontStyle.Regular), Color.AliceBlue, new PointF(rect.X + 5.0f, rect.Y + 5.0f));
                                         });
-            return this.AsImage.Clone();
+            return img;
         }
     }
 }

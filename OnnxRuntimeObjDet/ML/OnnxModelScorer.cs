@@ -40,7 +40,7 @@ namespace EntityExtractor.ML
 
             OnnxOutputParser outputParser = new OnnxOutputParser(new CustomVisionModel("ML\\TomowArea_iter4.ONNX\\"));
             var values = results.GetAsFloatArray();
-            var bboxes= outputParser.ParseOutputs(values, 0.3f);
+            var bboxes= outputParser.ParseOutputs(values, 0.1f);
 
             ImageNetPrediction resultDict = new ImageNetPrediction();
             resultDict.PredictedBoxes = bboxes.GetBoxesResult();
@@ -52,7 +52,7 @@ namespace EntityExtractor.ML
         public Imager RunDetection(Imager imager)
         {
             var prediction = PredictDataUsingModel(imager);
-            imager.DetectionResults = prediction.GetBestResults(5, 0.2f);
+            imager.DetectionResults = prediction.GetBestResults(5, 0.1f);
             //            if (!imager.DetectionResults.IsEmpty)
             //                Console.WriteLine($"{imager.DetectionResults.PredictedLabels[0]} -> {imager.DetectionResults.PredictedScores[0]}");
             return imager;
